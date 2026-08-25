@@ -19,13 +19,21 @@ The original Brain-Computer Interface (BCI) c-VEP Speller was built using Python
 
 This project strictly follows a **"Suckless" philosophy**, prioritizing simplicity, extreme performance, and minimal dependencies:
 - **Unity Build:** No CMake, no Makefiles, no complex dependency trees. The entire project compiles via a single `gcc` command.
-- **Zero-Blocking I/O:** All network operations (Dareplane TCP commands and Lab Streaming Layer (LSL) data streams) are strictly non-blocking. They never freeze the render loop, ensuring the 480 Hz visual stimulation remains flawless.
-- **Lazy Loading Memory:** Hardcoded sequence arrays have been eliminated. M-sequences are lazy-loaded from `.txt` files directly into memory during the first frame.
-- **Global Dependencies:** External libraries are installed globally into the compiler's environment rather than cluttering the project repository.
+- **Zero-Blocking I/O:** All network operations (Dareplane TCP commands and Lab Streaming Layer (LSL) data streams) are strictly non-blocking. They never freeze the render loop, ensuring the high refresh rate visual stimulation remains flawless.
+- **Deferred Logging:** Frame timing data is accumulated in memory during the experiment and written to disk (`log.csv`) only upon program exit, ensuring zero disk I/O during the render loop.
+- **Lazy Loading:** Hardcoded sequence arrays have been eliminated. M-sequences are lazy-loaded from `.txt` files directly into a static buffer during the first rendered frame.
+- **Global Dependencies:** External libraries (SDL3, LSL) are installed globally into the compiler's environment (MSYS2) rather than cluttering the project repository.
+
+### Windows Performance Tuning
+The following OS-level optimizations are applied at startup in `main.c` to guarantee the lowest possible latency:
+- **Process Priority:** `SetPriorityClass(HIGH_PRIORITY_CLASS)` elevates the process above normal system tasks.
+- **CPU Affinity:** `SetThreadAffinityMask` pins the render thread to a single CPU core to prevent context-switching jitter.
+- **MMCSS (Multimedia Class Scheduler):** `AvSetMmThreadCharacteristicsW("Pro Audio")` with `AVRT_PRIORITY_CRITICAL` tells Windows to treat this thread as a real-time audio/video workload, giving it the highest scheduling priority.
+- **Timer Resolution:** `timeBeginPeriod(1)` sets the system timer granularity to 1ms for precise frame timing.
 
 ---
 
-## 3. Ultimate Installation Guide (Windows)
+## 3. Installation Guide (Windows)
 
 To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment.
 
@@ -44,7 +52,7 @@ pacman -S mingw-w64-ucrt-x86_64-SDL3 mingw-w64-ucrt-x86_64-SDL3_ttf
 ```
 
 ### Step 3: Global Lab Streaming Layer (LSL) Setup
-Since `liblsl` is highly specific to BCI research, it is not available in the MSYS2 Pacman repository. We will embed it directly into your portable MSYS2 installation:
+Since `liblsl` is highly specific to BCI research, it is not available in the MSYS2 Pacman repository. We embed it directly into the portable MSYS2 installation:
 1. Download the Windows release of `liblsl` from its official GitHub repository.
 2. Copy the library files into your MSYS2 UCRT64 directory:
    - Copy `lsl.dll` into `D:\alper\msys64\ucrt64\bin`
@@ -61,14 +69,14 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
-- **Automatic Environment Injection:** Before running anything, `main.py` dynamically injects the persistent MSYS2 binary path (`D:\alper\msys64\ucrt64\bin`) into the runtime environment.
+- **Automatic Environment Injection:** Before running anything, `main.py` dynamically injects the persistent MSYS2 binary path (`D:\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
 You do not need to manually configure Windows PATH variables or run manual compilation scripts. Just launch it!
 
 ### Dareplane Configuration
-Add the module to your Dareplane `example_cfg.toml` using the legacy python format:
+Add the module to your Dareplane `example_cfg.toml`:
 ```toml
 [python.modules.dp-cvep-speller]
 
@@ -106,36 +114,74 @@ dp-cvep-speller/
 │   ├── output.c              ← Rendered output text
 │   ├── tts.c                 ← Windows SAPI Text-to-Speech (async via PowerShell)
 │   └── fps.c                 ← Frame timing, drop detection, CSV logging
-├── codes/                    ← Contains .txt files for m-sequences
+├── codes/                    ← M-sequence files (.txt for Speller, .npz for Decoder)
 ├── fonts/                    ← Montserrat fonts (.ttf)
 └── log.csv                   ← Frame-by-frame performance log created upon exit
 ```
 
 ### The Main Render Loop
-Running at the hardware's exact refresh rate (e.g., 480 Hz), the main loop is structured for zero latency:
-1. Check frame timings (`update_fps`)
-2. Poll non-blocking TCP network for Dareplane commands (`handle_server`)
-3. Poll LSL network for Decoder predictions (`handle_lsl_inlet`) - *Throttled strictly to prevent drops.*
-4. Process custom SDL events (State transitions)
-5. Render background, optosensor squares, output text, and the flashing keyboard grid.
-6. Block on `SDL_RenderPresent()` exactly until the Vsync interrupt.
+Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the main loop is structured for zero latency:
+1. **`update_fps`** — Calculate frame index from hardware clock, detect frame drops.
+2. **`update_server`** — Poll non-blocking TCP socket for Dareplane commands.
+3. **`update_lsl`** — Poll LSL network for Decoder predictions. Decoder search is throttled to once every **5 seconds** to prevent network broadcast from blocking the render loop.
+4. **`SDL_PollEvent`** — Process keyboard input, TCP events, and LSL events as custom SDL events that trigger state transitions.
+5. **`update_keyboard`** — Advance the keyboard state machine based on elapsed frame time.
+6. **Render** — Draw background, optosensor squares, output text, and the flashing keyboard grid.
+7. **`SDL_RenderPresent`** — Block exactly until the next Vsync interrupt.
 
 ---
 
-## 6. Communication Protocol
+## 6. Keyboard State Machine
 
-### LSL Markers (Outlet: `cvep-speller-stream`)
+The experiment progresses through a series of timed phases (states). Each state transition emits LSL markers for precise time-locked EEG analysis:
+
+```text
+Training Mode:
+  CUE (0.7s) → FLASHING (4.2s) → ITI (0.3s) → CUE → ... (repeats for cue_count trials)
+
+Online Mode:
+  FLASHING → [wait for Decoder prediction] → FEEDBACK (0.7s) → ITI (0.3s) → FLASHING → ...
+```
+
+| State | Duration | Description |
+|-------|----------|-------------|
+| `keyboard_state_idle` (ITI) | 0.3s | Inter-Trial Interval. Brief pause between trials. |
+| `keyboard_state_cue` | 0.7s | Target key is highlighted in yellow. Training mode only. |
+| `keyboard_state_flashing` | 4.2s | All 28 keys modulated by m-sequence. EEG is recorded during this phase. |
+| `keyboard_state_feedback` | 0.7s | Decoded key is highlighted in blue. TTS reads aloud the predicted letter. |
+
+---
+
+## 7. Communication Protocol
+
+### LSL Marker Stream (Outlet)
+| Property | Value |
+|----------|-------|
+| **Stream Name** | `cvep-speller-stream` |
+| **Stream Type** | `markers` |
+| **Channel Count** | 1 |
+| **Channel Format** | `cft_string` |
+| **Sampling Rate** | `LSL_IRREGULAR_RATE` |
+
 | Marker | Description |
 |--------|-------------|
 | `start_cue;label=X;key=Y` | Sent at the beginning of a cue phase. Contains target key index (`X`) and character (`Y`). |
 | `stop_cue` | Sent when the cue phase ends. |
-| `start_trial` | Sent when the stimulation (flashing) starts. Acts as the primary trigger for the decoder to epoch EEG data. |
+| `start_trial` | Sent when the stimulation (flashing) starts. Primary trigger for the decoder to epoch EEG data. |
 | `stop_trial` | Sent when the stimulation ends. |
 | `start_feedback;label=X;key=Y`| Sent when visual feedback is presented (based on decoder prediction). |
 | `stop_feedback` | Sent when the feedback phase ends. |
-| `start_iti` | Sent at the beginning of the Inter-Trial Interval (wait phase). |
+| `start_iti` | Sent at the beginning of the Inter-Trial Interval. |
 | `stop_iti` | Sent at the end of the Inter-Trial Interval. |
 | `frame_dropped` | Sent immediately if the renderer misses a Vsync deadline. |
+
+### LSL Decoder Stream (Inlet)
+| Property | Value |
+|----------|-------|
+| **Searched Stream Name** | `cvep-decoder-stream` |
+| **Channel Format** | `cft_char8` (single byte, key index) |
+| **Pull Timeout** | `0.0` (non-blocking) |
+| **Resolve Interval** | Every 5 seconds (throttled to prevent frame drops) |
 
 ### TCP Commands (Dareplane Server: `127.0.0.1:8084`)
 | Incoming Command | Triggered Action |
@@ -149,13 +195,34 @@ Running at the hardware's exact refresh rate (e.g., 480 Hz), the main loop is st
 
 ---
 
-## 7. Controls & Keyboard Shortcuts
+## 8. Performance Logging (`log.csv`)
+
+Upon program exit, all frame timing data accumulated during the session is written to `log.csv`. This file contains one row per rendered frame with the following columns:
+
+| Column | Description |
+|--------|-------------|
+| `timestamp_ms` | Timestamp in milliseconds since program start |
+| `frame_index` | Hardware refresh rate frame counter |
+| `sequence_index` | Presentation rate (stimulus) frame counter |
+| `refresh_rate` | Monitor refresh rate (Hz) |
+| `presentation_rate` | Stimulus presentation rate (Hz) |
+| `current_fps` | Measured FPS for this frame |
+| `difference_fps` | Deviation from target FPS |
+| `target_ms` | Expected frame duration (ms) |
+| `current_ms` | Actual frame duration (ms) |
+| `difference_ms` | Deviation from expected duration (ms) |
+| `is_dropped` | `DROP` if the frame was missed, empty otherwise |
+
+---
+
+## 9. Controls & Keyboard Shortcuts
 When testing manually or running offline experiments, use these physical keyboard shortcuts:
 - `ESC`: Close program safely (and dump performance logs)
-- `NumPad 1`: Switch to Idle Mode
-- `NumPad 2`: Switch to Training Mode
-- `NumPad 3`: Switch to Online Mode
-- `NumPad 4 & 6`: Toggle Left/Right optosensor test squares for the photodiode
-- `NumPad 5`: Toggle output text visibility
-- `NumPad 8`: Read output text aloud (TTS)
+- `1 / NumPad 1`: Switch to Idle Mode
+- `2 / NumPad 2`: Switch to Training Mode
+- `3 / NumPad 3`: Switch to Online Mode
+- `4 / NumPad 4`: Toggle Left optosensor (refresh rate photodiode)
+- `5 / NumPad 5`: Toggle output text visibility
+- `6 / NumPad 6`: Toggle Right optosensor (presentation rate photodiode)
+- `8 / NumPad 8`: Read output text aloud (TTS)
 - `A-Z, Space, Backspace`: Trigger a manual "mock" decoder simulation in Online mode for testing.
