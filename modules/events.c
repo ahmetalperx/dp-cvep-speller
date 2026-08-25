@@ -28,7 +28,19 @@ typedef struct custom_event_types_s {
 
 // ---------------------------------------------------------------------------------------------- //
 
-custom_event_types_t custom_event_types = { 0 };    
+custom_event_types_t custom_event_types = {
+
+    .custom_event_type_idle = 0,
+
+    .custom_event_type_training = 0,
+
+    .custom_event_type_online = 0,
+
+    .custom_event_type_feedback = 0,
+
+    .custom_event_type_close = 0,
+
+};
 
 // ---------------------------------------------------------------------------------------------- //
 
