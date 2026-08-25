@@ -132,23 +132,23 @@ int main() {
 
             // ---------------------------------------------------------------------------------------------- //
 
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_1 && !event.key.repeat) push_event_idle();
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_1 || event.key.key == SDLK_KP_1) && !event.key.repeat) push_event_idle();
 
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_2 && !event.key.repeat) push_event_training();
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_2 || event.key.key == SDLK_KP_2) && !event.key.repeat) push_event_training();
             
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_3 && !event.key.repeat) push_event_online();
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_3 || event.key.key == SDLK_KP_3) && !event.key.repeat) push_event_online();
             
             // ---------------------------------------------------------------------------------------------- //
 
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_4 && !event.key.repeat) toggle_photodiode_visibility(&photodiode_refresh_rate);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_4 || event.key.key == SDLK_KP_4) && !event.key.repeat) toggle_photodiode_visibility(&photodiode_refresh_rate);
             
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_5 && !event.key.repeat) toggle_output_visibility(&output);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_5 || event.key.key == SDLK_KP_5) && !event.key.repeat) toggle_output_visibility(&output);
 
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_6 && !event.key.repeat) toggle_photodiode_visibility(&photodiode_presentation_rate);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_6 || event.key.key == SDLK_KP_6) && !event.key.repeat) toggle_photodiode_visibility(&photodiode_presentation_rate);
 
             // ---------------------------------------------------------------------------------------------- //
 
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_KP_8 && !event.key.repeat) text_to_speech(&tts, output.output_text);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_8 || event.key.key == SDLK_KP_8) && !event.key.repeat) text_to_speech(&tts, output.output_text);
 
             // ---------------------------------------------------------------------------------------------- //
 
