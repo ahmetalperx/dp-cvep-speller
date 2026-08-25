@@ -14,9 +14,9 @@
 
 typedef enum photodiode_state_e {
 
-    photodiode_state_black,
-
-    photodiode_state_white,
+    photodiode_state_off,
+    
+    photodiode_state_on,
 
 } photodiode_state_t;
 
@@ -36,9 +36,9 @@ typedef struct photodiode_s {
 
     photodiode_state_t photodiode_state;
 
-    unsigned char photodiode_state_black_color[4];
+    unsigned char photodiode_state_off_color[4];
 
-    unsigned char photodiode_state_white_color[4];
+    unsigned char photodiode_state_on_color[4];
 
 } photodiode_t;
 
@@ -56,11 +56,11 @@ photodiode_t photodiode_refresh_rate = {
 
     .photodiode_is_visible = 1,
 
-    .photodiode_state = photodiode_state_white,
+    .photodiode_state = photodiode_state_on,
 
-    .photodiode_state_black_color = { 0, 0, 0, 255 },
+    .photodiode_state_off_color = { 0, 0, 0, 255 },
 
-    .photodiode_state_white_color = { 255, 255, 255, 255 },
+    .photodiode_state_on_color = { 255, 255, 255, 255 },
 
 };
 
@@ -78,11 +78,11 @@ photodiode_t photodiode_presentation_rate = {
 
     .photodiode_is_visible = 1,
 
-    .photodiode_state = photodiode_state_white,
+    .photodiode_state = photodiode_state_on,
 
-    .photodiode_state_black_color = { 0, 0, 0, 255 },
+    .photodiode_state_off_color = { 0, 0, 0, 255 },
 
-    .photodiode_state_white_color = { 255, 255, 255, 255 },
+    .photodiode_state_on_color = { 255, 255, 255, 255 },
 
 };
 
@@ -94,9 +94,9 @@ void render_photodiode(SDL_Renderer *renderer, photodiode_t *photodiode) {
 
     unsigned char *photodiode_color;
 
-    if (photodiode -> photodiode_state == photodiode_state_black) photodiode_color = photodiode -> photodiode_state_black_color;
+    if (photodiode -> photodiode_state == photodiode_state_off) photodiode_color = photodiode -> photodiode_state_off_color;
 
-    if (photodiode -> photodiode_state == photodiode_state_white) photodiode_color = photodiode -> photodiode_state_white_color;
+    if (photodiode -> photodiode_state == photodiode_state_on) photodiode_color = photodiode -> photodiode_state_on_color;
 
     SDL_SetRenderDrawColor(renderer, photodiode_color[0], photodiode_color[1], photodiode_color[2], photodiode_color[3]);
 
