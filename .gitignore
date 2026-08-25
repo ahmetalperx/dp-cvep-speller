@@ -1,3 +1,15 @@
 .agents/
 
 repos/
+
+*.exe
+
+main.exe
+
+*.csv
+
+log.csv
+
+__pycache__/
+
+*.pyc

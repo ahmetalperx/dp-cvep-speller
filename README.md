@@ -50,7 +50,6 @@ Since `liblsl` is highly specific to BCI research, it is not available in the MS
    - Copy `lsl.lib` (or `liblsl.a`) into `C:\msys64\ucrt64\lib`
    - Copy `lsl_c.h` and the other header files into `C:\msys64\ucrt64\include`
 
-*(Note: Alternatively, you can keep the `lsl/` folder directly inside the project root and point to it using `-I ./lsl/include -L ./lsl/lib` in your compile command.)*
 
 ### Step 4: Compile and Run
 Open your UCRT64 terminal, navigate to the project directory, and compile using the single command line:
@@ -64,27 +63,9 @@ gcc main.c -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt -o main.exe
 ### Advanced: Portable Lab Environment (e.g., Deep Freeze)
 If you are deploying this project on a laboratory computer that wipes its `C:\` drive upon every reboot (e.g., Deep Freeze), you can create a fully portable, persistent compilation environment.
 
-1. **Portable Installation:** When installing MSYS2, install it directly to a persistent drive (e.g., `D:\msys64`). MSYS2 is 100% portable.
-2. **Environment Variable Injection:** Instead of permanently modifying Windows `PATH` variables (which get wiped), create a small `compile.bat` script inside the project folder to dynamically inject the compiler path at runtime:
-
-```bat
-@echo off
-:: Temporarily add the portable MSYS2 binary folder to the PATH
-set PATH=D:\msys64\ucrt64\bin;%PATH%
-
-:: Compile the project
-gcc main.c -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l avrt -l winmm -o main.exe
-
-:: Run if successful
-if %errorlevel% equ 0 (
-    echo Compilation successful! Starting Speller...
-    main.exe
-) else (
-    echo Compilation failed!
-    pause
-)
-```
-Simply double-clicking `compile.bat` will flawlessly build and run the Speller, completely bypassing the C drive wipe restrictions.
+1. **Portable Installation:** When installing MSYS2, install it directly to a persistent drive (e.g., `D:\alper\msys64`). MSYS2 is 100% portable.
+2. **Environment Variable Injection:** Instead of permanently modifying Windows `PATH` variables (which get wiped), the `main.py` Python wrapper automatically injects the portable MSYS2 binary folder (`D:\alper\msys64\ucrt64\bin`) into the shell environment at runtime before compiling and starting the Speller. 
+There is no need for extra `.bat` scripts; running `python main.py` or launching via Dareplane handles the compilation and PATH injection seamlessly.
 
 ## 4. Directory Structure & Architecture
 ```text
@@ -106,7 +87,7 @@ brain_computer_interface_8/
 
 **Compilation Command:**
 ```bash
-gcc main.c -O3 -I ./lsl/include -L ./lsl/lib -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt -o main.exe
+gcc main.c -O3 -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt -o main.exe
 ```
 *Note: This project uses a "Unity Build" structure. All modules are included inside `main.c`. It compiles with a single command and minimizes external dependencies.*
 
