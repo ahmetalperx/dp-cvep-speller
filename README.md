@@ -322,9 +322,9 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `text_to_speech_volume` | `100` | Speech volume (0-100) |
-| `text_to_speech_speed` | `0` | Speech rate (-10 to 10) |
-| `text_to_speech_gender` | `1` | Voice gender (1=Female, 2=Male) |
-| `text_to_speech_age` | `3` | Voice age category |
+| `text_to_speech_speed` | `0` | Speech rate (-10 slowest to 10 fastest, 0 = normal) |
+| `text_to_speech_gender` | `1` | Windows SAPI VoiceGender enum (1 = Female, 2 = Male) |
+| `text_to_speech_age` | `3` | Windows SAPI VoiceAge enum (0 = NotSet, 1 = Child, 2 = Teen, 3 = Adult, 4 = Senior) |
 
 ### `modules/background.c` — Background
 | Parameter | Default | Description |
