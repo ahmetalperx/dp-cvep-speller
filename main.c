@@ -294,13 +294,13 @@ int main() {
 
         // ---------------------------------------------------------------------------------------------- //
         
-        set_photodiode_state(&photodiode_refresh_rate, (fps.refresh_rate_frame_index % 2 == 0) ? photodiode_state_white : photodiode_state_black);
+        set_photodiode_state(&photodiode_refresh_rate, (fps.refresh_rate_frame_index % 2 == 0) ? photodiode_state_on : photodiode_state_off);
 
         render_photodiode(renderer, &photodiode_refresh_rate);
 
         // ---------------------------------------------------------------------------------------------- //
 
-        set_photodiode_state(&photodiode_presentation_rate, (fps.presentation_rate_frame_index % 2 == 0) ? photodiode_state_white : photodiode_state_black);
+        set_photodiode_state(&photodiode_presentation_rate, (fps.presentation_rate_frame_index % 2 == 0) ? photodiode_state_on : photodiode_state_off);
 
         render_photodiode(renderer, &photodiode_presentation_rate);
 
