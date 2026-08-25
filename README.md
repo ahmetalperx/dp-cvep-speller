@@ -105,17 +105,19 @@ dp-cvep-speller/
 ├── main.c                    ← Main entry point, event loop, Unity Build wrapper
 ├── main.py                   ← Dareplane Python wrapper (handles runtime compilation)
 ├── modules/
-│   ├── background.c          ← Background color rendering
+│   ├── background.c          ← Background color rendering (solid black)
 │   ├── photodiode.c          ← Optosensor test squares (top-left & top-right)
-│   ├── keyboard.c            ← Keyboard grid, state machine, lazy sequence loader
+│   ├── keyboard.c            ← 28-key grid (7×4), state machine, lazy TXT sequence loader
 │   ├── events.c              ← SDL custom event system (TCP/LSL → main loop)
-│   ├── server.c              ← Winsock2 TCP server (listens to Dareplane commands)
+│   ├── server.c              ← Winsock2 non-blocking TCP server (Dareplane commands)
 │   ├── lsl.c                 ← LSL outlet (marker stream) & non-blocking inlet (decoder)
-│   ├── output.c              ← Rendered output text
+│   ├── output.c              ← Rendered output text (green, centered, Montserrat Medium 20pt)
 │   ├── tts.c                 ← Windows SAPI Text-to-Speech (async via PowerShell)
-│   └── fps.c                 ← Frame timing, drop detection, CSV logging
+│   └── fps.c                 ← Frame timing, drop detection, deferred CSV logging
 ├── codes/                    ← M-sequence files (.txt for Speller, .npz for Decoder)
-├── fonts/                    ← Montserrat fonts (.ttf)
+├── fonts/
+│   ├── montserrat_medium.ttf     ← Output text font (20pt)
+│   └── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
 └── log.csv                   ← Frame-by-frame performance log created upon exit
 ```
 
@@ -131,28 +133,46 @@ Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the 
 
 ---
 
-## 6. Keyboard State Machine
+## 6. Keyboard & Visual Layout
+
+### Keyboard Grid
+The on-screen keyboard consists of **28 keys** arranged in a **7×4 grid**:
+- **Keys:** A-Z, Space (`-`), Backspace (`<`)
+- **Key size:** 128×128 pixels with a 4px border
+- **Sequence file:** `codes/mgold_61_6521.txt` (61 keys × 6521 bits modulated Gold code)
+
+### Photodiode Squares
+Two 64×64px optosensor squares are rendered for external timing verification with a photodiode sensor:
+- **Top-Left (refresh rate):** Toggles black/white every hardware frame. Used to verify the monitor's true refresh rate.
+- **Top-Right (presentation rate):** Toggles black/white every stimulus frame. Used to verify the stimulus presentation rate matches the target.
+
+### Output Text
+Decoded letters are displayed as green centered text above the keyboard (Montserrat Medium, 20pt). In Online mode, each decoded letter is appended, with Space and Backspace support.
+
+---
+
+## 7. Keyboard State Machine
 
 The experiment progresses through a series of timed phases (states). Each state transition emits LSL markers for precise time-locked EEG analysis:
 
 ```text
-Training Mode:
-  CUE (0.7s) → FLASHING (4.2s) → ITI (0.3s) → CUE → ... (repeats for cue_count trials)
+Training Mode (10 trials per session):
+  CUE (0.7s) → FLASHING (4.2s) → ITI (0.3s) → CUE → ... (repeats 10 times)
 
-Online Mode:
+Online Mode (continuous until STOP):
   FLASHING → [wait for Decoder prediction] → FEEDBACK (0.7s) → ITI (0.3s) → FLASHING → ...
 ```
 
 | State | Duration | Description |
 |-------|----------|-------------|
 | `keyboard_state_idle` (ITI) | 0.3s | Inter-Trial Interval. Brief pause between trials. |
-| `keyboard_state_cue` | 0.7s | Target key is highlighted in yellow. Training mode only. |
-| `keyboard_state_flashing` | 4.2s | All 28 keys modulated by m-sequence. EEG is recorded during this phase. |
-| `keyboard_state_feedback` | 0.7s | Decoded key is highlighted in blue. TTS reads aloud the predicted letter. |
+| `keyboard_state_cue` | 0.7s | Target key is highlighted in yellow (border). Training mode only. |
+| `keyboard_state_flashing` | 4.2s | All 28 keys modulated by m-sequence (white flash = bit 1, dark = bit 0). EEG is recorded during this phase. |
+| `keyboard_state_feedback` | 0.7s | Decoded key is highlighted in blue (border). TTS reads aloud the predicted letter. |
 
 ---
 
-## 7. Communication Protocol
+## 8. Communication Protocol
 
 ### LSL Marker Stream (Outlet)
 | Property | Value |
@@ -195,7 +215,7 @@ Online Mode:
 
 ---
 
-## 8. Performance Logging (`log.csv`)
+## 9. Performance Logging (`log.csv`)
 
 Upon program exit, all frame timing data accumulated during the session is written to `log.csv`. This file contains one row per rendered frame with the following columns:
 
@@ -215,7 +235,7 @@ Upon program exit, all frame timing data accumulated during the session is writt
 
 ---
 
-## 9. Controls & Keyboard Shortcuts
+## 10. Controls & Keyboard Shortcuts
 When testing manually or running offline experiments, use these physical keyboard shortcuts:
 - `ESC`: Close program safely (and dump performance logs)
 - `1 / NumPad 1`: Switch to Idle Mode
