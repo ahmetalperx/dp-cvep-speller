@@ -149,7 +149,7 @@ void send_lsl_marker(lsl_t *lsl, const char *format, ...) {
     
     lsl_push_sample_str(lsl -> lsl_outlet, &marker_ptr);
 
-    // printf("[ INFO ] | lsl.c | send_lsl_marker() | %s\n", lsl -> lsl_marker_buffer);
+    // printf("\n[ INFO ] | lsl.c | send_lsl_marker() | %s\n", lsl -> lsl_marker_buffer);
 
 }
 

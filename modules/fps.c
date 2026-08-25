@@ -92,7 +92,7 @@ void initialize_fps(SDL_Window *window, fps_t *fps) {
 
     fps -> presentation_rate = fps -> refresh_rate / SDL_max(1, (int) (fps -> refresh_rate / fps -> presentation_rate + 0.5f));
 
-    printf("\n[ INFO ] | fps.c | initialize_fps() | refresh rate : %f Hz | presentation rate: %f Hz\n\n", fps -> refresh_rate, fps -> presentation_rate);
+    printf("\n[ INFO ] | fps.c | initialize_fps() | refresh rate: %f Hz | presentation rate: %f Hz\n\n", fps -> refresh_rate, fps -> presentation_rate);
 
     fps -> start_time = SDL_GetPerformanceCounter();
 

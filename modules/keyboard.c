@@ -23,54 +23,93 @@
 unsigned char sequence_matrix_buffer[256 * 256];
 
 int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num_bits) {
+
     FILE* file = fopen(filepath, "r");
+    
     if (!file) {
-        printf("Failed to open sequence file: %s\n", filepath);
+
+        printf("\n[ ERROR ] | keyboard.c | load_sequence_from_txt() | failed to open sequence file: %s\n", filepath);
+
         return 0;
     }
+    
     int rows = 0;
+
     int cols = 0;
+
     int current_cols = 0;
+
     int total_elements = 0;
+
     int ch;
+
     int last_char_was_newline = 1;
     
     while ((ch = fgetc(file)) != EOF) {
+        
         if (ch == '0' || ch == '1') {
+
             current_cols++;
+
             last_char_was_newline = 0;
+        
         } else if (ch == '\n') {
+
             if (!last_char_was_newline) {
+
                 rows++;
+                
                 if (cols == 0) cols = current_cols;
+                
                 current_cols = 0;
+                
                 last_char_was_newline = 1;
+            
             }
         }
     }
+    
     if (!last_char_was_newline) {
+        
         rows++;
+
         if (cols == 0) cols = current_cols;
+
     }
+    
     if (rows == 0 || cols == 0) {
-        printf("Empty or invalid sequence file.\n");
+        
+        printf("\n[ ERROR ] | keyboard.c | load_sequence_from_txt() | empty or invalid sequence file\n");
+
         fclose(file);
+        
         return 0;
     }
+    
     *out_num_keys = rows;
     *out_num_bits = cols;
-
+    
     rewind(file);
+    
     total_elements = 0;
+    
     while ((ch = fgetc(file)) != EOF) {
+        
         if (ch == '0') {
+
             sequence_matrix_buffer[total_elements++] = 0;
+            
         } else if (ch == '1') {
+
             sequence_matrix_buffer[total_elements++] = 1;
+            
         }
     }
+    
     fclose(file);
-    printf("Successfully loaded sequence from %s (%d keys, %d bits)\n", filepath, rows, cols);
+    
+    printf("\n[ INFO ] | keyboard.c | load_sequence_from_txt() | successfully loaded sequence from %s | %d keys | %d bits\n", filepath, rows, cols);
+    
     return 1;
 }
 
@@ -283,11 +322,16 @@ keyboard_t keyboard = {
 void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, keyboard_t *keyboard, int frame_index) {
 
     if (keyboard->keyboard_sequence_num_keys == 0) {
+
         int keys, bits;
+
         if (load_sequence_from_txt("codes/mgold_61_6521.txt", &keys, &bits)) {
+
             keyboard->keyboard_sequence_num_keys = keys;
             keyboard->keyboard_sequence_num_bits = bits;
+            
         }
+        
     }
 
     for (int index = 0; index < keyboard -> keyboard_key_count; index++) {
