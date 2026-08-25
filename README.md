@@ -150,7 +150,7 @@ Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the 
 The on-screen keyboard consists of **28 keys** arranged in a **7×4 grid**:
 - **Keys:** A-Z, Space (`-`), Backspace (`<`)
 - **Key size:** 128×128 pixels with a 4px border
-- **Sequence file:** `codes/mgold_61_6521.txt` (61 keys × 6521 bits modulated Gold code)
+- **Sequence file:** `codes/mgold_61_6521.txt` (Contains 63 sequences × 126 bits, Speller uses the first 28)
 
 ### Photodiode Squares
 Two 64×64px optosensor squares are rendered for external timing verification with a photodiode sensor:
@@ -273,7 +273,7 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | `state_feedback_duration` | `0.7` s | Duration of the decoded feedback highlight |
 | `cue_count` | `10` | Number of trials per Training session |
 | `keyboard_key_count` | `28` | Total number of keys on the on-screen keyboard |
-| Sequence file path | `"codes/mgold_61_6521.txt"` | M-sequence file loaded at runtime (in `render_keyboard`) |
+| Sequence file path | `"codes/mgold_61_6521.txt"` | M-sequence file loaded at runtime (actually 63 keys × 126 bits) |
 
 ### `modules/keyboard.c` — Visual Style (Color Scheme)
 | State | Border Color | Background Color | Text Color |
