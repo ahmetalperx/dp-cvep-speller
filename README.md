@@ -23,6 +23,16 @@ This project strictly follows a **"Suckless" philosophy**, prioritizing simplici
 - **Deferred Logging:** Frame timing data is accumulated in memory during the experiment and written to disk (`log.csv`) only upon program exit, ensuring zero disk I/O during the render loop.
 - **Lazy Loading:** Hardcoded sequence arrays have been eliminated. M-sequences are lazy-loaded from `.txt` files directly into a static buffer during the first rendered frame.
 - **Global Dependencies:** External libraries (SDL3, LSL) are installed globally into the compiler's environment (MSYS2) rather than cluttering the project repository.
+- **Fullscreen & VSync:** The window opens in exclusive fullscreen mode (`SDL_WINDOW_FULLSCREEN`) with hardware VSync enabled (`SDL_SetRenderVSync(renderer, 1)`), ensuring the render loop is locked precisely to the monitor's refresh rate.
+
+### Dual-Rate Timing System
+The Speller operates on a **dual-rate** timing architecture, which is the foundation of its precision:
+- **Refresh Rate:** The monitor's native hardware refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), auto-detected at startup via `SDL_GetCurrentDisplayMode`.
+- **Presentation Rate:** The rate at which visual stimuli (m-sequence bits) change on screen. The default target is **60 Hz**, but it is automatically snapped to the nearest evenly divisible rate: `presentation_rate = refresh_rate / round(refresh_rate / 60)`.
+  - Example: On a **480 Hz** monitor → `480 / round(480/60)` = `480/8` = **60 Hz** → every 8th hardware frame advances the stimulus by one bit.
+  - Example: On a **144 Hz** monitor → `144 / round(144/60)` = `144/2` = **72 Hz** → every 2nd hardware frame advances the stimulus.
+
+This ensures that stimulus transitions always land on exact hardware frame boundaries, eliminating sub-frame jitter entirely.
 
 ### Windows Performance Tuning
 The following OS-level optimizations are applied at startup in `main.c` to guarantee the lowest possible latency:
@@ -69,7 +79,8 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
-- **Automatic Environment Injection:** Before running anything, `main.py` dynamically injects the persistent MSYS2 binary path (`D:\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
+- **Instance Cleanup:** Before anything else, `taskkill /f /im main.exe` kills any previously running Speller instance to prevent TCP port conflicts.
+- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
@@ -246,3 +257,76 @@ When testing manually or running offline experiments, use these physical keyboar
 - `6 / NumPad 6`: Toggle Right optosensor (presentation rate photodiode)
 - `8 / NumPad 8`: Read output text aloud (TTS)
 - `A-Z, Space, Backspace`: Trigger a manual "mock" decoder simulation in Online mode for testing.
+
+---
+
+## 11. Configuration Reference (Hardcoded Parameters)
+
+This project does **not** use any external configuration file (e.g., `.json`, `.toml`, `.ini`). Following the Suckless philosophy, **all parameters are hardcoded directly in the C source files** as struct initializers. To change any parameter, you must edit the corresponding `.c` file and **recompile** the project.
+
+### `modules/keyboard.c` — Experiment Parameters
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `state_idle_duration` | `0.3` s | Inter-Trial Interval (pause between trials) |
+| `state_cue_duration` | `0.7` s | Duration of the cue highlight (Training mode only) |
+| `state_flashing_duration` | `4.2` s | Duration of the visual stimulation phase |
+| `state_feedback_duration` | `0.7` s | Duration of the decoded feedback highlight |
+| `cue_count` | `10` | Number of trials per Training session |
+| `keyboard_key_count` | `28` | Total number of keys on the on-screen keyboard |
+| Sequence file path | `"codes/mgold_61_6521.txt"` | M-sequence file loaded at runtime (in `render_keyboard`) |
+
+### `modules/keyboard.c` — Visual Style (Color Scheme)
+| State | Border Color | Background Color | Text Color |
+|-------|-------------|-----------------|------------|
+| Idle | Gray `(85,85,85)` | Dark `(16,16,16)` | Gray `(85,85,85)` |
+| Cue | Yellow `(255,255,0)` | Dark `(16,16,16)` | Gray `(85,85,85)` |
+| Flashing (bit=1) | White `(255,255,255)` | White `(255,255,255)` | Black `(0,0,0)` |
+| Feedback | Blue `(0,0,255)` | Dark `(16,16,16)` | Gray `(85,85,85)` |
+
+### `modules/lsl.c` — LSL Stream Configuration
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `lsl_marker_stream_name` | `"cvep-speller-stream"` | Name of the outgoing LSL marker stream |
+| `lsl_decoder_stream_name` | `"cvep-decoder-stream"` | Name of the incoming decoder LSL stream to search for |
+| Resolve throttle | `5000` ms | How often to search for the decoder stream when disconnected |
+
+### `modules/server.c` — TCP Server Configuration
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `server_ip` | `"127.0.0.1"` | IP address the TCP server binds to |
+| `server_port` | `8084` | TCP port the server listens on |
+
+### `modules/fps.c` — Frame Timing
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `presentation_rate` | `60.0` Hz | Target stimulus presentation rate (auto-snapped to the nearest divisible rate) |
+| `log_filename` | `"log.csv"` | Output filename for the frame timing log |
+| `log_capacity` | `1000000` | Maximum number of frame entries stored in memory |
+
+### `modules/photodiode.c` — Optosensor Squares
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Refresh rate square position | Top-Left `(0, 0)` | Position of the refresh rate photodiode |
+| Presentation rate square position | Top-Right `(1856, 0)` | Position of the presentation rate photodiode |
+| Square size | `64×64` px | Size of both optosensor squares |
+| `photodiode_is_visible` | `1` (visible) | Whether the square is shown at startup |
+
+### `modules/output.c` — Output Text Display
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `output_text_y` | `106.0` px | Vertical position of the output text |
+| `output_text_color` | Green `(0,255,0)` | Color of the decoded output text |
+| `output_is_visible` | `1` (visible) | Whether the output text is shown at startup |
+
+### `modules/tts.c` — Text-to-Speech
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `text_to_speech_volume` | `100` | Speech volume (0-100) |
+| `text_to_speech_speed` | `0` | Speech rate (-10 to 10) |
+| `text_to_speech_gender` | `1` | Voice gender (1=Female, 2=Male) |
+| `text_to_speech_age` | `3` | Voice age category |
+
+### `modules/background.c` — Background
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `background_color` | Black `(0,0,0)` | Screen background color |
