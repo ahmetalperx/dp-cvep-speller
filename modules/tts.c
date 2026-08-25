@@ -44,7 +44,17 @@ tts_t tts = {
     
     .text_to_speech_gender = 1,
     
-    .text_to_speech_age = 3 
+    .text_to_speech_age = 3,
+
+    .command_string = { 0 },
+
+    .tts_process_handle = NULL,
+
+    .tts_exit_code = 0,
+
+    .startup_info = { 0 },
+
+    .process_information = { 0 },
 
 };
 
