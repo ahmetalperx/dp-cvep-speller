@@ -113,26 +113,31 @@ gcc main.c -O3 -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt -o main.exe
 
 ```text
 dp-cvep-speller/
-├── main.c                    ← Main entry point, event loop, Unity Build wrapper
-├── main.py                   ← Dareplane Python wrapper (handles runtime compilation)
+├── main.c                        ← Main entry point, event loop, Unity Build wrapper
+├── main.py                       ← Dareplane Python wrapper (handles runtime compilation)
+├── main.exe                      ← Compiled executable (generated automatically at runtime)
 ├── modules/
-│   ├── background.c          ← Background color rendering (solid black)
-│   ├── photodiode.c          ← Optosensor test squares (top-left & top-right)
-│   ├── keyboard.c            ← 28-key grid (7×4), state machine, lazy TXT sequence loader
-│   ├── events.c              ← SDL custom event system (TCP/LSL → main loop)
-│   ├── server.c              ← Winsock2 non-blocking TCP server (Dareplane commands)
-│   ├── lsl.c                 ← LSL outlet (marker stream) & non-blocking inlet (decoder)
-│   ├── output.c              ← Rendered output text (green, centered, Montserrat Medium 20pt)
-│   ├── tts.c                 ← Windows SAPI Text-to-Speech (async via PowerShell)
-│   └── fps.c                 ← Frame timing, drop detection, deferred CSV logging
+│   ├── background.c              ← Background color rendering (solid black)
+│   ├── photodiode.c              ← Optosensor test squares (top-left & top-right)
+│   ├── keyboard.c                ← 28-key grid (7×4), state machine, lazy TXT sequence loader
+│   ├── events.c                  ← SDL custom event system (TCP/LSL → main loop)
+│   ├── server.c                  ← Winsock2 non-blocking TCP server (Dareplane commands)
+│   ├── lsl.c                     ← LSL outlet (marker stream) & non-blocking inlet (decoder)
+│   ├── output.c                  ← Rendered output text (green, centered, Montserrat Medium 20pt)
+│   ├── tts.c                     ← Windows SAPI Text-to-Speech (async via PowerShell)
+│   └── fps.c                     ← Frame timing, drop detection, deferred CSV logging
 ├── codes/
 │   ├── generate_codes.py         ← Generates m-sequences (outputs both .npz and .txt)
-│   ├── mgold_61_6521.txt         ← Modulated Gold codes read by C Speller
-│   └── mgold_61_6521.npz         ← Same codes in NumPy format read by Python Decoder
+│   ├── mgold_61_6521.txt         ← Modulated Gold codes read by C Speller (used in experiment)
+│   ├── mgold_61_6521.npz         ← Modulated Gold codes read by Python Decoder
+│   ├── gold_61_6521.txt          ← Raw Gold codes (TXT format)
+│   ├── gold_61_6521.npz          ← Raw Gold codes (NPZ format)
+│   ├── mseq_61_shift.txt         ← Shifted m-sequences (TXT format)
+│   └── mseq_61_shift.npz         ← Shifted m-sequences (NPZ format)
 ├── fonts/
 │   ├── montserrat_medium.ttf     ← Output text font (20pt)
 │   └── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
-└── log.csv                   ← Frame-by-frame performance log created upon exit
+└── log.csv                       ← Frame-by-frame performance log created upon exit
 ```
 
 ### The Main Render Loop
