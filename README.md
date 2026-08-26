@@ -125,7 +125,10 @@ dp-cvep-speller/
 │   ├── output.c              ← Rendered output text (green, centered, Montserrat Medium 20pt)
 │   ├── tts.c                 ← Windows SAPI Text-to-Speech (async via PowerShell)
 │   └── fps.c                 ← Frame timing, drop detection, deferred CSV logging
-├── codes/                    ← M-sequence files (.txt for Speller, .npz for Decoder)
+├── codes/
+│   ├── generate_codes.py         ← Generates m-sequences (outputs both .npz and .txt)
+│   ├── mgold_61_6521.txt         ← Modulated Gold codes read by C Speller
+│   └── mgold_61_6521.npz         ← Same codes in NumPy format read by Python Decoder
 ├── fonts/
 │   ├── montserrat_medium.ttf     ← Output text font (20pt)
 │   └── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
