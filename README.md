@@ -1,4 +1,4 @@
-# C-VEP Speller (Dareplane C/SDL3 Port)
+﻿# C-VEP Speller (Dareplane C/SDL3 Port)
 
 > **Affiliation:** Radboud University, Donders Institute for Brain, Cognition and Behaviour  
 > **Program:** Erasmus+ Internship Project  
@@ -49,7 +49,7 @@ To ensure maximum reliability, especially in laboratory environments where compu
 
 ### Step 1: Portable MSYS2 & GCC
 1. Download **MSYS2** from [msys2.org](https://www.msys2.org/). 
-2. Install it directly to a persistent, non-wiped drive (e.g., `D:\alper\msys64`). This ensures your compiler survives reboots.
+2. Install it directly to a persistent, non-wiped drive (e.g., `D:\Users\ahmetalper\msys64`). This ensures your compiler survives reboots.
 3. Open the **MSYS2 UCRT64** terminal and install the GCC compiler:
    ```bash
    pacman -S mingw-w64-ucrt-x86_64-gcc
@@ -65,9 +65,9 @@ pacman -S mingw-w64-ucrt-x86_64-SDL3 mingw-w64-ucrt-x86_64-SDL3_ttf
 Since `liblsl` is highly specific to BCI research, it is not available in the MSYS2 Pacman repository. We embed it directly into the portable MSYS2 installation:
 1. Download the Windows release of `liblsl` from its official GitHub repository.
 2. Copy the library files into your MSYS2 UCRT64 directory:
-   - Copy `lsl.dll` into `D:\alper\msys64\ucrt64\bin`
-   - Copy `lsl.lib` (or `liblsl.a`) into `D:\alper\msys64\ucrt64\lib`
-   - Copy `lsl_c.h` (and related headers) into `D:\alper\msys64\ucrt64\include`
+   - Copy `lsl.dll` into `D:\Users\ahmetalper\msys64\ucrt64\bin`
+   - Copy `lsl.lib` (or `liblsl.a`) into `D:\Users\ahmetalper\msys64\ucrt64\lib`
+   - Copy `lsl_c.h` (and related headers) into `D:\Users\ahmetalper\msys64\ucrt64\include`
 
 *Your environment is now completely self-sufficient and portable!*
 
@@ -80,7 +80,7 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
 - **Instance Cleanup:** Before anything else, `taskkill /f /im main.exe` kills any previously running Speller instance to prevent TCP port conflicts.
-- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
+- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\ahmetalper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
