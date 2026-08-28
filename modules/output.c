@@ -12,6 +12,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "dictionary.c"
+
 // ---------------------------------------------------------------------------------------------- //
 
 typedef struct output_s {
@@ -29,6 +31,12 @@ typedef struct output_s {
     unsigned char output_text_color[4];
 
     TTF_Text *output_ttf_text;
+    
+    char predicted_text[64];
+    
+    unsigned char predicted_text_color[4];
+    
+    TTF_Text *predicted_ttf_text;
 
 } output_t;
 
@@ -49,6 +57,12 @@ output_t output = {
     .output_text_color = { 0, 255, 0, 255 },
 
     .output_ttf_text = NULL,
+    
+    .predicted_text = "",
+    
+    .predicted_text_color = { 128, 128, 128, 255 },
+    
+    .predicted_ttf_text = NULL,
 
 };
 
@@ -66,22 +80,75 @@ void render_output(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font
 
         if (output -> output_ttf_text != NULL) TTF_SetTextColor(output -> output_ttf_text, output -> output_text_color[0], output -> output_text_color[1], output -> output_text_color[2], output -> output_text_color[3]);
         
+        const char *pred = get_prediction(output -> output_text);
+        
+        strncpy(output -> predicted_text, pred, sizeof(output -> predicted_text) - 1);
+        
+        output -> predicted_text[sizeof(output -> predicted_text) - 1] = '\0';
+
+        if (output -> predicted_ttf_text != NULL) TTF_DestroyText(output -> predicted_ttf_text);
+        
+        if (strlen(output -> predicted_text) > 0) {
+            
+            output -> predicted_ttf_text = TTF_CreateText(text_engine, font, output -> predicted_text, 0);
+            
+            if (output -> predicted_ttf_text != NULL) TTF_SetTextColor(output -> predicted_ttf_text, output -> predicted_text_color[0], output -> predicted_text_color[1], output -> predicted_text_color[2], output -> predicted_text_color[3]);
+            
+        } 
+        else {
+            
+            output -> predicted_ttf_text = NULL;
+            
+        }
+
         output -> output_text_changed = 0;
 
     }
 
+    int total_width = 0;
+    
+    int text_height = 0;
+    
+    int output_width = 0;
+    
+    int pred_width = 0;
+
     if (output -> output_ttf_text != NULL) {
         
-        int text_width, text_height;
+        TTF_GetTextSize(output -> output_ttf_text, &output_width, &text_height);
         
-        TTF_GetTextSize(output -> output_ttf_text, &text_width, &text_height);
+        total_width += output_width;
         
-        int screen_width, screen_height;
-        
-        SDL_GetRenderOutputSize(renderer, &screen_width, &screen_height);
-        
-        TTF_DrawRendererText(output -> output_ttf_text, (screen_width - text_width) / 2.0f, output -> output_text_y - (text_height / 2.0f));
+    }
 
+    if (output -> predicted_ttf_text != NULL) {
+        
+        int temp_h;
+        
+        TTF_GetTextSize(output -> predicted_ttf_text, &pred_width, &temp_h);
+        
+        total_width += pred_width;
+        
+    }
+
+    int screen_width, screen_height;
+    
+    SDL_GetRenderOutputSize(renderer, &screen_width, &screen_height);
+
+    float start_x = (screen_width - total_width) / 2.0f;
+    
+    float start_y = output -> output_text_y - (text_height / 2.0f);
+
+    if (output -> output_ttf_text != NULL) {
+        
+        TTF_DrawRendererText(output -> output_ttf_text, start_x, start_y);
+        
+    }
+
+    if (output -> predicted_ttf_text != NULL) {
+        
+        TTF_DrawRendererText(output -> predicted_ttf_text, start_x + output_width, start_y);
+        
     }
 
 }
@@ -156,6 +223,40 @@ void clear_output(output_t *output) {
 
     output -> output_text_changed = 1;
 
+}
+
+// ---------------------------------------------------------------------------------------------- //
+
+void accept_prediction(output_t *output) {
+    
+    const char *pred = get_prediction(output -> output_text);
+    
+    if (pred && strlen(pred) > 0) {
+        
+        size_t pred_len = strlen(pred);
+        
+        if (output -> output_text_length + pred_len < 127) {
+            
+            strcat(output -> output_text, pred);
+            
+            output -> output_text_length += (int) pred_len;
+            
+            if (output -> output_text_length < 127) {
+                
+                output -> output_text[output -> output_text_length] = ' ';
+                
+                output -> output_text[output -> output_text_length + 1] = '\0';
+                
+                output -> output_text_length++;
+                
+            }
+            
+            output -> output_text_changed = 1;
+            
+        }
+        
+    }
+    
 }
 
 // ---------------------------------------------------------------------------------------------- //
