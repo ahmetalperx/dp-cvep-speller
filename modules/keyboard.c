@@ -461,7 +461,7 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
                 
             } else if (keyboard -> keyboard_keys[index].key_letter == '^') {
                 
-                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x81\xA2", 0);
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8C\x8C", 0);
                 
             } else if (keyboard -> keyboard_keys[index].key_letter == '#') {
                 
