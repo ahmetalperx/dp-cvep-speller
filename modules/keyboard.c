@@ -461,7 +461,7 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
                 
             } else if (keyboard -> keyboard_keys[index].key_letter == '^') {
                 
-                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8C\x8C", 0);
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, keyboard -> is_lowercase ? "\xEF\x8C\x8C" : "\xEF\x8C\x89", 0);
                 
             } else if (keyboard -> keyboard_keys[index].key_letter == '#') {
                 
@@ -537,7 +537,7 @@ void toggle_caps_lock(keyboard_t *keyboard) {
         
         char letter = keyboard -> keyboard_keys[i].key_letter;
         
-        if (letter >= 'A' && letter <= 'Z') {
+        if ((letter >= 'A' && letter <= 'Z') || letter == '^') {
             
             if (keyboard -> keyboard_keys[i].key_ttf_text) {
                 
