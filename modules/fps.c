@@ -88,7 +88,17 @@ fps_t fps = {
 
 void initialize_fps(SDL_Window *window, fps_t *fps) {
 
-    fps -> refresh_rate = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window)) -> refresh_rate;
+    const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window));
+    
+    if (mode == NULL) {
+        
+        printf("Failed to get display mode.\n");
+        
+        exit(1);
+        
+    }
+    
+    fps -> refresh_rate = mode -> refresh_rate;
 
     fps -> presentation_rate = fps -> refresh_rate / SDL_max(1, (int) (fps -> refresh_rate / fps -> presentation_rate + 0.5f));
 
@@ -124,7 +134,7 @@ void update_fps(fps_t *fps, lsl_t *lsl) {
 
     Uint64 current_time = SDL_GetPerformanceCounter();
 
-    fps -> refresh_rate_frame_index = (int) (((double) (current_time - fps -> start_time) / (double) SDL_GetPerformanceFrequency()) * fps -> refresh_rate);
+    fps -> refresh_rate_frame_index = (int) (((double) (current_time - fps -> start_time) / (double) SDL_GetPerformanceFrequency()) * fps -> refresh_rate + 0.5);
 
     int dropped_frames = 0;
 

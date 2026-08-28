@@ -17,9 +17,10 @@ The original Brain-Computer Interface (BCI) c-VEP Speller was built using Python
 
 ## 2. Architectural Philosophy
 
-This project strictly follows a **"Suckless" philosophy**, prioritizing simplicity, extreme performance, and minimal dependencies:
+This project strictly follows a **"Suckless" philosophy**, prioritizing simplicity, extreme performance, zero-latency, and minimal dependencies:
 - **Unity Build:** No CMake, no Makefiles, no complex dependency trees. The entire project compiles via a single `gcc` command.
-- **Zero-Blocking I/O:** All network operations (Dareplane TCP commands and Lab Streaming Layer (LSL) data streams) are strictly non-blocking. They never freeze the render loop, ensuring the high refresh rate visual stimulation remains flawless.
+- **Zero-Blocking I/O:** All network operations (Dareplane TCP commands and Lab Streaming Layer (LSL) data streams) are strictly non-blocking. They never freeze the render loop, ensuring the high refresh rate visual stimulation remains flawless. Network packets are parsed via in-place buffer shifts (`memmove`); LSL markers use variadic inline formatting (`vsnprintf`), reducing the need for temporary heap allocations.
+- **Asynchronous Subsystems:** Heavy operations like Text-to-Speech (TTS) are pushed to native Windows OS threads (`CreateThread`) ensuring they never block the primary rendering loop, even when processing long strings or repeating keys.
 - **Deferred Logging:** Frame timing data is accumulated in memory during the experiment and written to disk (`log.csv`) only upon program exit, ensuring zero disk I/O during the render loop.
 - **Lazy Loading:** Hardcoded sequence arrays have been eliminated. M-sequences are lazy-loaded from `.txt` files directly into a static buffer during the first rendered frame.
 - **Global Dependencies:** External libraries (SDL3, LSL) are installed globally into the compiler's environment (MSYS2) rather than cluttering the project repository.
@@ -162,7 +163,8 @@ dp-cvep-speller/
 │   ├── lsl.c                     ← LSL outlet (marker stream) & non-blocking inlet (decoder)
 │   ├── output.c                  ← Rendered output text (green, centered, Montserrat Medium 20pt)
 │   ├── tts.c                     ← Windows SAPI Text-to-Speech (async via PowerShell)
-│   └── fps.c                     ← Frame timing, drop detection, deferred CSV logging
+│   ├── fps.c                     ← Frame timing, drop detection, deferred CSV logging
+│   └── dictionary.c              ← Predictive text engine using words/en.txt
 ├── codes/
 │   ├── generate_codes.py         ← Generates m-sequences (outputs both .npz and .txt)
 │   ├── mgold_61_6521.txt         ← Modulated Gold codes read by C Speller (used in experiment)
@@ -174,6 +176,8 @@ dp-cvep-speller/
 ├── fonts/
 │   ├── montserrat_medium.ttf     ← Output text font (20pt)
 │   └── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
+├── words/
+│   └── en.txt                    ← 14,000 word English dictionary for predictive text
 └── log.csv                       ← Frame-by-frame performance log created upon exit
 ```
 
@@ -181,7 +185,7 @@ dp-cvep-speller/
 Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the main loop is structured for zero latency:
 1. **`update_fps`** — Calculate frame index from hardware clock, detect frame drops.
 2. **`update_server`** — Poll non-blocking TCP socket for Dareplane commands.
-3. **`update_lsl`** — Poll LSL network for Decoder predictions. Decoder search is throttled to once every **5 seconds** to prevent network broadcast from blocking the render loop.
+3. **`update_lsl`** — Poll LSL network for Decoder predictions. Decoder search is throttled to once every **2 seconds** to prevent network broadcast from blocking the render loop.
 4. **`SDL_PollEvent`** — Process keyboard input, TCP events, and LSL events as custom SDL events that trigger state transitions.
 5. **`update_keyboard`** — Advance the keyboard state machine based on elapsed frame time.
 6. **Render** — Draw background, optosensor squares, output text, and the flashing keyboard grid.
@@ -203,7 +207,7 @@ Two 64×64px optosensor squares are rendered for external timing verification wi
 - **Top-Right (presentation rate):** Toggles black/white every stimulus frame. Used to verify the stimulus presentation rate matches the target.
 
 ### Output Text
-Decoded letters are displayed as green centered text above the keyboard (Montserrat Medium, 20pt). In Online mode, each decoded letter is appended, with Space and Backspace support.
+Decoded letters are displayed as green centered text above the keyboard (Montserrat Medium, 20pt). In Online mode, each decoded letter is appended, with Space and Backspace support. Furthermore, `dictionary.c` provides grey predictive text auto-completions based on `words/en.txt` with case-insensitive checking (`tolower`).
 
 ---
 
@@ -257,7 +261,7 @@ Online Mode (continuous until STOP):
 | **Searched Stream Name** | `cvep-decoder-stream` |
 | **Channel Format** | `cft_char8` (single byte, key index) |
 | **Pull Timeout** | `0.0` (non-blocking) |
-| **Resolve Interval** | Every 5 seconds (throttled to prevent frame drops) |
+| **Resolve Interval** | Every 2000 ms (throttled to prevent frame drops) |
 
 ### TCP Commands (Dareplane Server: `127.0.0.1:8084`)
 | Incoming Command | Triggered Action |
@@ -301,6 +305,7 @@ When testing manually or running offline experiments, use these physical keyboar
 - `5 / NumPad 5`: Toggle output text visibility
 - `6 / NumPad 6`: Toggle Right optosensor (presentation rate photodiode)
 - `8 / NumPad 8`: Read output text aloud (TTS)
+- `9 / NumPad 9`: Accept TTS prediction text (reads whole string)
 - `A-Z, Space, Backspace`: Trigger a manual "mock" decoder simulation in Online mode for testing.
 
 ---
@@ -313,6 +318,8 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `presentation_rate` | `60.0` Hz | Target stimulus frequency. Code automatically rounds it to nearest integer divisor of the hardware refresh rate. |
+| `log_filename` | `"log.csv"` | Output filename for the frame timing log |
+| `log_capacity` | `1000000` | Maximum number of frame entries stored in memory |
 
 ### `modules/keyboard.c` — Experiment Parameters
 | Parameter | Default | Description |
@@ -338,20 +345,13 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 |-----------|---------|-------------|
 | `lsl_marker_stream_name` | `"cvep-speller-stream"` | Name of the outgoing LSL marker stream |
 | `lsl_decoder_stream_name` | `"cvep-decoder-stream"` | Name of the incoming decoder LSL stream to search for |
-| Resolve throttle | `5000` ms | How often to search for the decoder stream when disconnected |
+| Resolve throttle | `2000` ms | How often to search for the decoder stream when disconnected (previously 5000ms, tightened for faster coupling) |
 
 ### `modules/server.c` — TCP Server Configuration
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `server_ip` | `"127.0.0.1"` | IP address the TCP server binds to |
 | `server_port` | `8084` | TCP port the server listens on |
-
-### `modules/fps.c` — Frame Timing
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `presentation_rate` | `60.0` Hz | Target stimulus presentation rate (auto-snapped to the nearest divisible rate) |
-| `log_filename` | `"log.csv"` | Output filename for the frame timing log |
-| `log_capacity` | `1000000` | Maximum number of frame entries stored in memory |
 
 ### `modules/photodiode.c` — Optosensor Squares
 | Parameter | Default | Description |
@@ -366,6 +366,7 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 |-----------|---------|-------------|
 | `output_text_y` | `106.0` px | Vertical position of the output text |
 | `output_text_color` | Green `(0,255,0)` | Color of the decoded output text |
+| `predicted_text_color` | Gray `(128,128,128)` | Color of the predictive autocomplete text |
 | `output_is_visible` | `1` (visible) | Whether the output text is shown at startup |
 
 ### `modules/tts.c` — Text-to-Speech
@@ -380,3 +381,10 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `background_color` | Black `(0,0,0)` | Screen background color |
+
+### `modules/dictionary.c` — Predictive Dictionary
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Dictionary File | `"words/en.txt"` | 14,000 word English dictionary used for predictive typing logic |
+| `MAX_WORDS` | `20000` | Max number of words allocated in dictionary |
+| `MAX_WORD_LENGTH` | `256` | Max character length per word line to prevent buffer overflows |

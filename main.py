@@ -22,8 +22,6 @@ max_connect_retries = 10
 
 # ------------------------------------------------------------------------------------------------ #
 
-import subprocess
-
 def main():
 
     path = r'D:\Users\alper\msys64\ucrt64\bin'

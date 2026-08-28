@@ -123,8 +123,9 @@ void update_lsl(lsl_t *lsl) {
         }
         
         if (last_valid >= 0) {
-
+            
             push_event_feedback(last_valid);
+            
         }
 
     }

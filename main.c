@@ -6,6 +6,8 @@
 
 #include <winsock2.h>
 
+#define WIN32_LEAN_AND_MEAN
+
 #include <windows.h>
 
 #include <mmsystem.h>
@@ -54,7 +56,11 @@ int main() {
 
     HANDLE mmcss_handle = AvSetMmThreadCharacteristicsW(L"Pro Audio", &mmcss_task_index);
 
-    AvSetMmThreadPriority(mmcss_handle, AVRT_PRIORITY_CRITICAL);
+    if (mmcss_handle != NULL) {
+        
+        AvSetMmThreadPriority(mmcss_handle, AVRT_PRIORITY_CRITICAL);
+        
+    }
 
     // ---------------------------------------------------------------------------------------------- //
 
@@ -96,6 +102,14 @@ int main() {
     
     TTF_Font *font_awesome_48 = TTF_OpenFont("fonts/fa-solid-900.ttf", 48);
     
+    if (!font_montserrat_medium_20 || !font_montserrat_extrabold_64 || !font_awesome_48) {
+        
+        printf("Failed to load fonts.\n");
+        
+        return -1;
+        
+    }
+    
     // ---------------------------------------------------------------------------------------------- //
 
     initialize_dictionary("words/en.txt");
@@ -125,7 +139,11 @@ int main() {
         
         // ---------------------------------------------------------------------------------------------- //
         
-        update_lsl(&lsl);
+        if (keyboard.keyboard_state != keyboard_state_flashing) {
+            
+            update_lsl(&lsl);
+            
+        }
         
         // ---------------------------------------------------------------------------------------------- //
 
@@ -290,7 +308,9 @@ int main() {
                 } else if (letter == '#') {
 
                     output.output_text[0] = '\0';
+                    
                     output.output_text_length = 0;
+                    
                     output.output_text_changed = 1;
 
                     text_to_speech(&tts, "clear");
@@ -302,11 +322,17 @@ int main() {
                     add_letter_to_output(&output, letter);
 
                     if (letter == '.') {
+                        
                         text_to_speech(&tts, "period");
+                        
                     } else if (letter == ',') {
+                        
                         text_to_speech(&tts, "comma");
+                        
                     } else {
-                        text_to_speech(&tts, (char[2]) {letter, '\0'});
+                        
+                        text_to_speech(&tts, (char[2]) { letter, '\0' });
+                        
                     }
 
                 }

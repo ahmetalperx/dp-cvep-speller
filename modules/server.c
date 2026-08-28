@@ -28,7 +28,9 @@ typedef struct server_s {
     
     SOCKET client_socket;
 
-    char server_buffer[256];
+    char server_buffer[1024];
+    
+    int buffer_len;
     
 } server_t;
 
@@ -45,6 +47,8 @@ server_t server = {
     .client_socket = INVALID_SOCKET,
 
     .server_buffer = { 0 },
+    
+    .buffer_len = 0,
 
 };
 
@@ -142,39 +146,69 @@ void update_server(server_t *server) {
 
     if (server -> client_socket != INVALID_SOCKET) {
 
-        ZeroMemory(server -> server_buffer, sizeof(server -> server_buffer));
-
-        int bytes = recv(server -> client_socket, server -> server_buffer, 255, 0);
+        int bytes = recv(server -> client_socket, server -> server_buffer + server -> buffer_len, sizeof(server -> server_buffer) - server -> buffer_len - 1, 0);
         
         if (bytes > 0) {
-
-            for (int i = 0; server -> server_buffer[i]; i++) {
+            
+            server -> buffer_len += bytes;
+            
+            server -> server_buffer[server -> buffer_len] = '\0';
+            
+            int start_idx = 0;
+            
+            for (int i = 0; i < server -> buffer_len; i++) {
                 
                 if (server -> server_buffer[i] == '\r' || server -> server_buffer[i] == '\n' || server -> server_buffer[i] == ';' || server -> server_buffer[i] == '|') {
                     
                     server -> server_buffer[i] = '\0';
                     
+                    char *cmd = server -> server_buffer + start_idx;
+                    
+                    if (strcmp(cmd, "TRAINING") == 0) push_event_training();
+
+                    else if (strcmp(cmd, "ONLINE") == 0) push_event_online();
+
+                    else if (strcmp(cmd, "STOP") == 0) push_event_idle();
+
+                    else if (strcmp(cmd, "CLOSE") == 0) push_event_close();
+
+                    else if (strcmp(cmd, "GET_PCOMMS") == 0) send(server -> client_socket, "TRAINING|ONLINE|STOP|CLOSE|GET_PCOMMS|UP", 40, 0);
+
+                    else if (strcmp(cmd, "UP") == 0) send(server -> client_socket, "1", 1, 0);
+                    
+                    start_idx = i + 1;
+                    
                 }
                 
             }
             
-            if (strcmp(server -> server_buffer, "TRAINING") == 0) push_event_training();
-
-            else if (strcmp(server -> server_buffer, "ONLINE") == 0) push_event_online();
-
-            else if (strcmp(server -> server_buffer, "STOP") == 0) push_event_idle();
-
-            else if (strcmp(server -> server_buffer, "CLOSE") == 0) push_event_close();
+            if (start_idx > 0) {
+                
+                int remaining = server -> buffer_len - start_idx;
+                
+                if (remaining > 0) memmove(server -> server_buffer, server -> server_buffer + start_idx, remaining);
+                
+                server -> buffer_len = remaining;
+                
+                server -> server_buffer[server -> buffer_len] = '\0';
+                
+            }
             
-            else if (strcmp(server -> server_buffer, "GET_PCOMMS") == 0) send(server -> client_socket, "TRAINING|ONLINE|STOP|CLOSE|GET_PCOMMS|UP", 40, 0);
-
-            else if (strcmp(server -> server_buffer, "UP") == 0) send(server -> client_socket, "1", 1, 0);
+            if (server -> buffer_len >= sizeof(server -> server_buffer) - 1) {
+                
+                server -> buffer_len = 0;
+                
+                server -> server_buffer[0] = '\0';
+                
+            }
             
         } else if (bytes == 0 || (bytes == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
 
             closesocket(server -> client_socket);
-
+            
             server -> client_socket = INVALID_SOCKET;
+            
+            server -> buffer_len = 0;
 
         }
         

@@ -20,7 +20,7 @@
 
 #define MAX_DICTIONARY_WORDS 20000
 
-#define MAX_WORD_LENGTH 64
+#define MAX_WORD_LENGTH 256
 
 char *dictionary_words[MAX_DICTIONARY_WORDS];
 
@@ -45,6 +45,14 @@ void initialize_dictionary(const char *filepath) {
     while (fgets(buffer, sizeof(buffer), file) && dictionary_word_count < MAX_DICTIONARY_WORDS) {
         
         size_t len = strlen(buffer);
+        
+        if (len == sizeof(buffer) - 1 && buffer[len - 1] != '\n') {
+            
+            int c;
+            
+            while ((c = fgetc(file)) != '\n' && c != EOF);
+            
+        }
         
         while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
             
@@ -100,7 +108,7 @@ const char *get_prediction(const char *current_text) {
 
     size_t len = strlen(last_word);
     
-    if (len == 0) return "";
+    if (len == 0 || len >= MAX_WORD_LENGTH) return "";
 
     char upper_last_word[MAX_WORD_LENGTH];
     
@@ -109,7 +117,9 @@ const char *get_prediction(const char *current_text) {
     upper_last_word[sizeof(upper_last_word) - 1] = '\0';
     
     for (int i = 0; upper_last_word[i]; i++) {
-        upper_last_word[i] = toupper((unsigned char)upper_last_word[i]);
+        
+        upper_last_word[i] = toupper((unsigned char) upper_last_word[i]);
+        
     }
 
     for (int index = 0; index < dictionary_word_count; index++) {

@@ -93,6 +93,14 @@ int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num
     *out_num_keys = rows;
     *out_num_bits = cols;
     
+    if (sequence_matrix_buffer != NULL) {
+        
+        free(sequence_matrix_buffer);
+        
+        sequence_matrix_buffer = NULL;
+        
+    }
+    
     sequence_matrix_buffer = (unsigned char *) malloc(rows * cols);
 
     rewind(file);
@@ -101,15 +109,25 @@ int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num
     
     while ((ch = fgetc(file)) != EOF) {
         
+        if (total_elements >= rows * cols) break; // Prevent buffer overflow
+        
         if (ch == '0') {
-
+            
             sequence_matrix_buffer[total_elements++] = 0;
             
         } else if (ch == '1') {
-
+            
             sequence_matrix_buffer[total_elements++] = 1;
             
         }
+        
+    }
+    
+    // Fill remaining with 0 if any (due to ragged array)
+    while (total_elements < rows * cols) {
+        
+        sequence_matrix_buffer[total_elements++] = 0;
+        
     }
     
     fclose(file);
@@ -125,6 +143,14 @@ void upsample_sequences(int num_keys, int num_bits, int frames_per_stimulus) {
 
     upsampled_num_bits = num_bits * frames_per_stimulus;
 
+    if (upsampled_matrix_buffer != NULL) {
+        
+        free(upsampled_matrix_buffer);
+        
+        upsampled_matrix_buffer = NULL;
+        
+    }
+    
     upsampled_matrix_buffer = (unsigned char *) malloc(num_keys * upsampled_num_bits);
 
     for (int key = 0; key < num_keys; key++) {
@@ -371,15 +397,17 @@ keyboard_t keyboard = {
 
 void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, TTF_Font *font_icon, keyboard_t *keyboard, int frame_index, int frames_per_stimulus) {
 
-    if (keyboard->keyboard_sequence_num_keys == 0) {
+    if (keyboard -> keyboard_sequence_num_keys == 0) {
 
         int keys, bits;
 
-        if (load_sequence_from_txt(keyboard->keyboard_sequence_file_path, &keys, &bits)) {
+        if (load_sequence_from_txt(keyboard -> keyboard_sequence_file_path, &keys, &bits)) {
 
-            keyboard->keyboard_sequence_num_keys = keys;
-            keyboard->keyboard_sequence_num_bits = bits;
-            keyboard->keyboard_sequence_matrix = sequence_matrix_buffer;
+            keyboard -> keyboard_sequence_num_keys = keys;
+            
+            keyboard -> keyboard_sequence_num_bits = bits;
+            
+            keyboard -> keyboard_sequence_matrix = sequence_matrix_buffer;
 
             upsample_sequences(keys, bits, frames_per_stimulus);
             
@@ -415,22 +443,38 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
         if (keyboard -> keyboard_keys[index].key_ttf_text == NULL) {
             
-            if (keyboard->keyboard_keys[index].key_letter == '*') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x80\xA8", 0);
-            } else if (keyboard->keyboard_keys[index].key_letter == '>') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEE\x8B\x8A", 0);
-            } else if (keyboard->keyboard_keys[index].key_letter == '<') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x95\x9A", 0);
-            } else if (keyboard->keyboard_keys[index].key_letter == '-') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\x91", 0);
-            } else if (keyboard->keyboard_keys[index].key_letter == '^') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x81\xA2", 0);
-            } else if (keyboard->keyboard_keys[index].key_letter == '#') {
-                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\xAD", 0);
+            if (keyboard -> keyboard_keys[index].key_letter == '*') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x80\xA8", 0);
+                
+            } else if (keyboard -> keyboard_keys[index].key_letter == '>') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEE\x8B\x8A", 0);
+                
+            } else if (keyboard -> keyboard_keys[index].key_letter == '<') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x95\x9A", 0);
+                
+            } else if (keyboard -> keyboard_keys[index].key_letter == '-') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\x91", 0);
+                
+            } else if (keyboard -> keyboard_keys[index].key_letter == '^') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x81\xA2", 0);
+                
+            } else if (keyboard -> keyboard_keys[index].key_letter == '#') {
+                
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\xAD", 0);
+                
             } else {
-                char letter = keyboard->keyboard_keys[index].key_letter;
-                if (keyboard->is_lowercase && letter >= 'A' && letter <= 'Z') letter += 32;
+                
+                char letter = keyboard -> keyboard_keys[index].key_letter;
+                
+                if (keyboard -> is_lowercase && letter >= 'A' && letter <= 'Z') letter += 32;
+                
                 keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font, (char[2]) { letter, '\0' }, 0);
+                
             }
             
         }
@@ -486,16 +530,27 @@ int get_key_index_by_letter(keyboard_t *keyboard, char letter) {
 // ---------------------------------------------------------------------------------------------- //
 
 void toggle_caps_lock(keyboard_t *keyboard) {
-    keyboard->is_lowercase = !keyboard->is_lowercase;
-    for (int i = 0; i < keyboard->keyboard_key_count; i++) {
-        char letter = keyboard->keyboard_keys[i].key_letter;
+    
+    keyboard -> is_lowercase = !keyboard -> is_lowercase;
+    
+    for (int i = 0; i < keyboard -> keyboard_key_count; i++) {
+        
+        char letter = keyboard -> keyboard_keys[i].key_letter;
+        
         if (letter >= 'A' && letter <= 'Z') {
-            if (keyboard->keyboard_keys[i].key_ttf_text) {
-                TTF_DestroyText(keyboard->keyboard_keys[i].key_ttf_text);
-                keyboard->keyboard_keys[i].key_ttf_text = NULL;
+            
+            if (keyboard -> keyboard_keys[i].key_ttf_text) {
+                
+                TTF_DestroyText(keyboard -> keyboard_keys[i].key_ttf_text);
+                
+                keyboard -> keyboard_keys[i].key_ttf_text = NULL;
+                
             }
+            
         }
+        
     }
+    
 }
 
 // ---------------------------------------------------------------------------------------------- //
@@ -583,6 +638,19 @@ void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float r
                 keyboard -> state_start_frame_index = refresh_rate_frame_index;
                 
                 send_lsl_marker(lsl, "start_trial");
+            }
+            else if (keyboard -> keyboard_state == keyboard_state_flashing && state_elapsed_time >= keyboard -> state_flashing_duration * 1.5f) {
+                
+                // Fallback timeout to prevent infinite flashing if decoder disconnects/fails
+                
+                send_lsl_marker(lsl, "stop_trial");
+                
+                keyboard -> keyboard_state = keyboard_state_idle;
+                
+                keyboard -> state_start_frame_index = refresh_rate_frame_index;
+                
+                send_lsl_marker(lsl, "start_iti");
+                
             }
 
         }
