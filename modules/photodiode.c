@@ -92,7 +92,7 @@ void render_photodiode(SDL_Renderer *renderer, photodiode_t *photodiode) {
 
     if (!photodiode -> photodiode_is_visible) return;
 
-    unsigned char *photodiode_color;
+    unsigned char *photodiode_color = photodiode -> photodiode_state_off_color;
 
     if (photodiode -> photodiode_state == photodiode_state_off) photodiode_color = photodiode -> photodiode_state_off_color;
 
