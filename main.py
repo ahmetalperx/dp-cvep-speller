@@ -28,7 +28,7 @@ def main():
 
     subprocess.run('taskkill /f /im main.exe 2>NUL', shell = True)
 
-    subprocess.run(f'set PATH={path};%PATH% && gcc main.c -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l avrt -l winmm -o main.exe', shell = True)
+    subprocess.run(f'set PATH={path};%PATH% && gcc main.c -O3 -l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt -o main.exe', shell = True)
 
     subprocess.run(f'set PATH={path};%PATH% && start "" "main.exe"', shell = True)
 
