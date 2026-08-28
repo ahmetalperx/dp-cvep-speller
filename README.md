@@ -1,4 +1,4 @@
-﻿# C-VEP Speller (Dareplane C/SDL3 Port)
+# C-VEP Speller (Dareplane C/SDL3 Port)
 
 > **Affiliation:** Radboud University, Donders Institute for Brain, Cognition and Behaviour  
 > **Program:** Erasmus+ Internship Project  
@@ -34,6 +34,15 @@ The Speller operates on a **dual-rate** timing architecture, which is the founda
 
 This ensures that stimulus transitions always land on exact hardware frame boundaries, eliminating sub-frame jitter entirely.
 
+### Runtime Upsampling
+The m-sequence codes stored in the `.txt` file are the **original** modulated codes (e.g., 63 keys × 126 bits at 60 Hz). The C Speller **automatically upsamples** these codes at runtime to match the monitor's refresh rate:
+
+1. At startup, the `frames_per_stimulus` ratio is calculated: `N = refresh_rate / presentation_rate` (e.g., `240 / 60 = 4`).
+2. Each original bit is repeated `N` times into an `upsampled_matrix_buffer` (e.g., 126 bits × 4 = 504 upsampled bits).
+3. The render loop indexes directly into this upsampled buffer using the hardware `refresh_rate_frame_index`.
+
+This means **a single `.txt` file works on any monitor** (60 Hz, 144 Hz, 240 Hz, 480 Hz) without needing to regenerate or pre-upsample the codes in Python.
+
 ### Windows Performance Tuning
 The following OS-level optimizations are applied at startup in `main.c` to guarantee the lowest possible latency:
 - **Process Priority:** `SetPriorityClass(HIGH_PRIORITY_CLASS)` elevates the process above normal system tasks.
@@ -48,26 +57,45 @@ The following OS-level optimizations are applied at startup in `main.c` to guara
 To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment.
 
 ### Step 1: Portable MSYS2 & GCC
+**MSYS2** is a Unix-like development environment for Windows. It provides a package manager (`pacman`) and a terminal to install compilers and libraries.
+
 1. Download **MSYS2** from [msys2.org](https://www.msys2.org/). 
-2. Install it directly to a persistent, non-wiped drive (e.g., `D:\Users\ahmetalper\msys64`). This ensures your compiler survives reboots.
-3. Open the **MSYS2 UCRT64** terminal and install the GCC compiler:
+2. Install it directly to a persistent, non-wiped drive (e.g., `D:\Users\alper\msys64`). This ensures your compiler survives reboots.
+3. Open the **MSYS2 UCRT64** terminal (not the default MSYS terminal!) and install the **GCC C compiler**. GCC is needed to compile `main.c` into `main.exe`:
    ```bash
    pacman -S mingw-w64-ucrt-x86_64-gcc
    ```
 
 ### Step 2: Install Graphics Libraries (SDL3)
-In the same UCRT64 terminal, install SDL3 and its font extension:
+**SDL3** is the graphics library that handles window creation, GPU-accelerated rendering, and VSync synchronization. **SDL3_ttf** is its font extension for rendering text on screen (keyboard letters and output text).
+
+In the same UCRT64 terminal:
 ```bash
-pacman -S mingw-w64-ucrt-x86_64-SDL3 mingw-w64-ucrt-x86_64-SDL3_ttf
+pacman -S mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
 ```
 
+> ⚠️ **Package names are lowercase and use dashes** (not `SDL3` or `SDL3_ttf`). Pacman is case-sensitive.
+
 ### Step 3: Global Lab Streaming Layer (LSL) Setup
-Since `liblsl` is highly specific to BCI research, it is not available in the MSYS2 Pacman repository. We embed it directly into the portable MSYS2 installation:
-1. Download the Windows release of `liblsl` from its official GitHub repository.
-2. Copy the library files into your MSYS2 UCRT64 directory:
-   - Copy `lsl.dll` into `D:\Users\ahmetalper\msys64\ucrt64\bin`
-   - Copy `lsl.lib` (or `liblsl.a`) into `D:\Users\ahmetalper\msys64\ucrt64\lib`
-   - Copy `lsl_c.h` (and related headers) into `D:\Users\ahmetalper\msys64\ucrt64\include`
+**LSL (Lab Streaming Layer)** is the real-time data streaming protocol used in BCI research. It allows the Speller to send event markers (e.g., `start_trial`, `frame_dropped`) that are time-synchronized with EEG recordings. Since `liblsl` is not available in the MSYS2 package repository, we manually embed it into the compiler environment.
+
+1. Go to the official liblsl releases page: [github.com/sccn/liblsl/releases](https://github.com/sccn/liblsl/releases)
+2. Download the latest **Windows AMD64** release (e.g., `liblsl-1.16.2-Win_amd64.zip`)
+3. Extract the ZIP file. Inside you will find:
+   ```
+   liblsl-X.XX.X-Win_amd64/
+   ├── bin/lsl.dll           ← Runtime library (NEEDED)
+   ├── lib/lsl.lib           ← Linker library (NEEDED)
+   ├── include/lsl_c.h       ← C header file (NEEDED)
+   ├── include/lsl/...       ← Additional headers (NEEDED)
+   ├── cmake/...             ← CMake config (NOT NEEDED, ignore)
+   └── share/...             ← Documentation (NOT NEEDED, ignore)
+   ```
+4. Copy the required files into your MSYS2 UCRT64 directories:
+   - Copy `bin/lsl.dll` → `D:\Users\alper\msys64\ucrt64\bin\lsl.dll`
+   - Copy `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\lsl.lib`
+   - Copy `include/lsl_c.h` → `D:\Users\alper\msys64\ucrt64\include\lsl_c.h`
+   - Copy the entire `include/lsl/` folder → `D:\Users\alper\msys64\ucrt64\include\lsl\`
 
 *Your environment is now completely self-sufficient and portable!*
 
@@ -80,7 +108,7 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
 - **Instance Cleanup:** Before anything else, `taskkill /f /im main.exe` kills any previously running Speller instance to prevent TCP port conflicts.
-- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\ahmetalper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
+- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
@@ -281,7 +309,7 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | `state_feedback_duration` | `0.7` s | Duration of the decoded feedback highlight |
 | `cue_count` | `10` | Number of trials per Training session |
 | `keyboard_key_count` | `28` | Total number of keys on the on-screen keyboard |
-| Sequence file path | `"codes/mgold_61_6521.txt"` | M-sequence file loaded at runtime (actually 63 keys × 126 bits) |
+| Sequence file path | `"codes/mgold_61_6521.txt"` | Original modulated m-sequence file (63 keys × 126 bits). Automatically upsampled at runtime to match refresh rate. Buffer is dynamically allocated via `malloc`. |
 
 ### `modules/keyboard.c` — Visual Style (Color Scheme)
 | State | Border Color | Background Color | Text Color |

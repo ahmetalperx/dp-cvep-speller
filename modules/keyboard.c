@@ -20,7 +20,13 @@
 
 // ---------------------------------------------------------------------------------------------- //
 
-unsigned char sequence_matrix_buffer[256 * 256];
+unsigned char *sequence_matrix_buffer = NULL;
+
+unsigned char *upsampled_matrix_buffer = NULL;
+
+int upsampled_num_bits = 0;
+
+// ---------------------------------------------------------------------------------------------- //
 
 int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num_bits) {
 
@@ -38,8 +44,6 @@ int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num
     int cols = 0;
 
     int current_cols = 0;
-
-    int total_elements = 0;
 
     int ch;
 
@@ -89,9 +93,11 @@ int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num
     *out_num_keys = rows;
     *out_num_bits = cols;
     
+    sequence_matrix_buffer = (unsigned char *) malloc(rows * cols);
+
     rewind(file);
     
-    total_elements = 0;
+    int total_elements = 0;
     
     while ((ch = fgetc(file)) != EOF) {
         
@@ -108,9 +114,37 @@ int load_sequence_from_txt(const char* filepath, int* out_num_keys, int* out_num
     
     fclose(file);
     
-    printf("\n[ INFO ] | keyboard.c | load_sequence_from_txt() | successfully loaded sequence from %s | %d keys | %d bits\n", filepath, rows, cols);
+    printf("\n[ INFO ] | keyboard.c | load_sequence_from_txt() | loaded %s | %d keys x %d bits\n", filepath, rows, cols);
     
     return 1;
+}
+
+// ---------------------------------------------------------------------------------------------- //
+
+void upsample_sequences(int num_keys, int num_bits, int frames_per_stimulus) {
+
+    upsampled_num_bits = num_bits * frames_per_stimulus;
+
+    upsampled_matrix_buffer = (unsigned char *) malloc(num_keys * upsampled_num_bits);
+
+    for (int key = 0; key < num_keys; key++) {
+
+        for (int bit = 0; bit < num_bits; bit++) {
+
+            unsigned char val = sequence_matrix_buffer[key * num_bits + bit];
+
+            for (int rep = 0; rep < frames_per_stimulus; rep++) {
+
+                upsampled_matrix_buffer[key * upsampled_num_bits + bit * frames_per_stimulus + rep] = val;
+
+            }
+
+        }
+
+    }
+
+    printf("\n[ INFO ] | keyboard.c | upsample_sequences() | %d keys x %d bits -> %d upsampled bits (x%d)\n", num_keys, num_bits, upsampled_num_bits, frames_per_stimulus);
+
 }
 
 // ---------------------------------------------------------------------------------------------- //
@@ -309,7 +343,7 @@ keyboard_t keyboard = {
     
     .state_feedback_duration = 0.7f,
     
-    .keyboard_sequence_matrix = sequence_matrix_buffer,
+    .keyboard_sequence_matrix = NULL,
     
     .keyboard_sequence_num_keys = 0,
     
@@ -319,7 +353,7 @@ keyboard_t keyboard = {
 
 // ---------------------------------------------------------------------------------------------- //
 
-void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, keyboard_t *keyboard, int frame_index) {
+void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, keyboard_t *keyboard, int frame_index, int frames_per_stimulus) {
 
     if (keyboard->keyboard_sequence_num_keys == 0) {
 
@@ -329,6 +363,9 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
             keyboard->keyboard_sequence_num_keys = keys;
             keyboard->keyboard_sequence_num_bits = bits;
+            keyboard->keyboard_sequence_matrix = sequence_matrix_buffer;
+
+            upsample_sequences(keys, bits, frames_per_stimulus);
             
         }
         
@@ -342,7 +379,7 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
         if (keyboard -> keyboard_state == keyboard_state_cue && index == keyboard -> keyboard_key_index) color_index = 1;
 
-        if (keyboard -> keyboard_state == keyboard_state_flashing && keyboard -> keyboard_sequence_matrix[(index % keyboard -> keyboard_sequence_num_keys) * keyboard -> keyboard_sequence_num_bits + (frame_index % keyboard -> keyboard_sequence_num_bits)] == 1) color_index = 2;
+        if (keyboard -> keyboard_state == keyboard_state_flashing && upsampled_matrix_buffer && upsampled_matrix_buffer[(index % keyboard -> keyboard_sequence_num_keys) * upsampled_num_bits + (frame_index % upsampled_num_bits)] == 1) color_index = 2;
 
         if (keyboard -> keyboard_state == keyboard_state_feedback && index == keyboard -> keyboard_key_index) color_index = 3;
 
@@ -402,11 +439,11 @@ int get_key_index_by_letter(keyboard_t *keyboard, char letter) {
 
 // ---------------------------------------------------------------------------------------------- //
 
-void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, float presentation_rate, lsl_t *lsl) {
+void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float refresh_rate, lsl_t *lsl) {
 
     if (keyboard -> is_sequence_running) {
 
-        float state_elapsed_time = (float)(presentation_rate_frame_index - keyboard -> state_start_frame_index) / presentation_rate;
+        float state_elapsed_time = (float)(refresh_rate_frame_index - keyboard -> state_start_frame_index) / refresh_rate;
 
         if (keyboard -> keyboard_mode == keyboard_mode_training) { 
 
@@ -416,7 +453,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                 keyboard -> keyboard_state = keyboard_state_idle;
 
-                keyboard->state_start_frame_index = presentation_rate_frame_index;
+                keyboard->state_start_frame_index = refresh_rate_frame_index;
 
                 keyboard -> keyboard_key_index = -1;
 
@@ -429,7 +466,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                 keyboard -> keyboard_state = keyboard_state_flashing;
 
-                keyboard -> state_start_frame_index = presentation_rate_frame_index;
+                keyboard -> state_start_frame_index = refresh_rate_frame_index;
 
                 send_lsl_marker(lsl, "start_trial");
             }
@@ -440,7 +477,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                 keyboard -> keyboard_state = keyboard_state_idle;
 
-                keyboard -> state_start_frame_index = presentation_rate_frame_index;
+                keyboard -> state_start_frame_index = refresh_rate_frame_index;
 
                 send_lsl_marker(lsl, "start_iti");
             }
@@ -457,7 +494,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                     keyboard -> keyboard_state = keyboard_state_cue;
 
-                    keyboard -> state_start_frame_index = presentation_rate_frame_index;
+                    keyboard -> state_start_frame_index = refresh_rate_frame_index;
 
                     char letter = keyboard -> keyboard_keys[keyboard -> keyboard_key_index].key_letter;
 
@@ -482,7 +519,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                 keyboard -> keyboard_state = keyboard_state_idle;
 
-                keyboard -> state_start_frame_index = presentation_rate_frame_index;
+                keyboard -> state_start_frame_index = refresh_rate_frame_index;
 
                 keyboard -> keyboard_key_index = -1;
 
@@ -495,7 +532,7 @@ void update_keyboard(keyboard_t *keyboard, int presentation_rate_frame_index, fl
 
                 keyboard -> keyboard_state = keyboard_state_flashing;
 
-                keyboard -> state_start_frame_index = presentation_rate_frame_index;
+                keyboard -> state_start_frame_index = refresh_rate_frame_index;
                 
                 send_lsl_marker(lsl, "start_trial");
             }

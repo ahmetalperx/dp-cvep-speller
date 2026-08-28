@@ -24,7 +24,7 @@ max_connect_retries = 10
 
 def main():
 
-    path = r"D:\Users\ahmetalper\msys64\ucrt64\bin"
+    path = r'D:\Users\alper\msys64\ucrt64\bin'
 
     subprocess.run('taskkill /f /im main.exe 2>NUL', shell = True)
 

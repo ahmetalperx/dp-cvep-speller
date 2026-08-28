@@ -194,7 +194,7 @@ int main() {
 
                 keyboard.keyboard_state = keyboard_state_cue;
 
-                keyboard.state_start_frame_index = fps.presentation_rate_frame_index;
+                keyboard.state_start_frame_index = fps.refresh_rate_frame_index;
 
                 char letter = (keyboard.keyboard_key_index >= 0 && keyboard.keyboard_key_index < keyboard.keyboard_key_count) ? keyboard.keyboard_keys[keyboard.keyboard_key_index].key_letter : '?';
 
@@ -220,7 +220,7 @@ int main() {
 
                 keyboard.keyboard_state = keyboard_state_flashing;
 
-                keyboard.state_start_frame_index = fps.presentation_rate_frame_index;
+                keyboard.state_start_frame_index = fps.refresh_rate_frame_index;
                 
                 send_lsl_marker(&lsl, "start_trial");
                 
@@ -240,7 +240,7 @@ int main() {
 
                 keyboard.keyboard_state = keyboard_state_feedback;
 
-                keyboard.state_start_frame_index = fps.presentation_rate_frame_index;
+                keyboard.state_start_frame_index = fps.refresh_rate_frame_index;
 
                 char letter = (keyboard.keyboard_key_index >= 0 && keyboard.keyboard_key_index < keyboard.keyboard_key_count) ? keyboard.keyboard_keys[keyboard.keyboard_key_index].key_letter : '?';
                 
@@ -282,11 +282,11 @@ int main() {
 
         // ---------------------------------------------------------------------------------------------- //
 
-        update_keyboard(&keyboard, fps.presentation_rate_frame_index, fps.presentation_rate, &lsl);
+        update_keyboard(&keyboard, fps.refresh_rate_frame_index, fps.refresh_rate, &lsl);
 
         // ---------------------------------------------------------------------------------------------- //
 
-        int sequence_frame_index = fps.presentation_rate_frame_index - keyboard.state_start_frame_index;
+        int sequence_frame_index = fps.refresh_rate_frame_index - keyboard.state_start_frame_index;
 
         // ---------------------------------------------------------------------------------------------- //
 
@@ -310,7 +310,7 @@ int main() {
 
         // ---------------------------------------------------------------------------------------------- //
 
-        render_keyboard(renderer, text_engine, font_montserrat_extrabold_64, &keyboard, sequence_frame_index);
+        render_keyboard(renderer, text_engine, font_montserrat_extrabold_64, &keyboard, sequence_frame_index, fps.frames_per_stimulus);
 
         // ---------------------------------------------------------------------------------------------- //
         
