@@ -207,7 +207,7 @@ typedef struct keyboard_key_colors_s {
 
 typedef struct keyboard_s {
 
-    key_t keyboard_keys[28];
+    key_t keyboard_keys[32];
     
     int keyboard_key_count; 
     
@@ -242,6 +242,8 @@ typedef struct keyboard_s {
     int keyboard_sequence_num_bits;
 
     const char* keyboard_sequence_file_path;
+    
+    int is_lowercase;
 
 } keyboard_t;
 
@@ -251,65 +253,73 @@ keyboard_t keyboard = {
     
     .keyboard_keys = {
 
-        { .key_letter = 'A', .key_x = 368.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'A', .key_x = 280.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'B', .key_x = 544.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'B', .key_x = 456.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'C', .key_x = 720.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'C', .key_x = 632.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'D', .key_x = 896.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'D', .key_x = 808.0f,  .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'E', .key_x = 1072.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'E', .key_x = 984.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'F', .key_x = 1248.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'F', .key_x = 1160.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'G', .key_x = 1424.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'G', .key_x = 1336.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'H', .key_x = 368.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'H', .key_x = 280.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'I', .key_x = 544.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'I', .key_x = 456.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'J', .key_x = 720.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'J', .key_x = 632.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'K', .key_x = 896.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'K', .key_x = 808.0f,  .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'L', .key_x = 1072.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'L', .key_x = 984.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'M', .key_x = 1248.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'M', .key_x = 1160.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'N', .key_x = 1424.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'N', .key_x = 1336.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'O', .key_x = 368.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'O', .key_x = 280.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'P', .key_x = 544.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'P', .key_x = 456.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'Q', .key_x = 720.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'Q', .key_x = 632.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'R', .key_x = 896.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'R', .key_x = 808.0f,  .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'S', .key_x = 1072.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'S', .key_x = 984.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'T', .key_x = 1248.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'T', .key_x = 1160.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'U', .key_x = 1424.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'U', .key_x = 1336.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'V', .key_x = 368.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'V', .key_x = 280.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'W', .key_x = 544.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'W', .key_x = 456.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'X', .key_x = 720.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'X', .key_x = 632.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'Y', .key_x = 896.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'Y', .key_x = 808.0f,  .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = 'Z', .key_x = 1072.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = 'Z', .key_x = 984.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = '-', .key_x = 1248.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+        { .key_letter = '^', .key_x = 1160.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
 
-        { .key_letter = '<', .key_x = 1424.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f }
+        { .key_letter = '#', .key_x = 1336.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+
+        { .key_letter = '-', .key_x = 1512.0f, .key_y = 212.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+
+        { .key_letter = '<', .key_x = 1512.0f, .key_y = 388.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+
+        { .key_letter = '>', .key_x = 1512.0f, .key_y = 564.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f },
+
+        { .key_letter = '*', .key_x = 1512.0f, .key_y = 740.0f, .key_width = 128.0f, .key_height = 128.0f, .key_border_thickness = 4.0f }
 
     },
     
-    .keyboard_key_count = 28, 
+    .keyboard_key_count = 32, 
     
     .keyboard_key_colors = {
 
@@ -327,7 +337,7 @@ keyboard_t keyboard = {
     
     .keyboard_key_index = -1,
     
-    .keyboard_mode = keyboard_mode_training,
+    .keyboard_mode = keyboard_mode_online,
     
     .cue_count = 10,
     
@@ -350,14 +360,16 @@ keyboard_t keyboard = {
     .keyboard_sequence_num_keys = 0,
     
     .keyboard_sequence_num_bits = 0,
-    
+
     .keyboard_sequence_file_path = "codes/mgold_61_6521.txt",
+    
+    .is_lowercase = 0
 
 };
 
 // ---------------------------------------------------------------------------------------------- //
 
-void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, keyboard_t *keyboard, int frame_index, int frames_per_stimulus) {
+void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font *font, TTF_Font *font_icon, keyboard_t *keyboard, int frame_index, int frames_per_stimulus) {
 
     if (keyboard->keyboard_sequence_num_keys == 0) {
 
@@ -403,7 +415,23 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
         if (keyboard -> keyboard_keys[index].key_ttf_text == NULL) {
             
-            keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font, (char[2]) { keyboard -> keyboard_keys[index].key_letter, '\0' }, 0);
+            if (keyboard->keyboard_keys[index].key_letter == '*') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x80\xA8", 0);
+            } else if (keyboard->keyboard_keys[index].key_letter == '>') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEE\x8B\x8A", 0);
+            } else if (keyboard->keyboard_keys[index].key_letter == '<') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x95\x9A", 0);
+            } else if (keyboard->keyboard_keys[index].key_letter == '-') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\x91", 0);
+            } else if (keyboard->keyboard_keys[index].key_letter == '^') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x81\xA2", 0);
+            } else if (keyboard->keyboard_keys[index].key_letter == '#') {
+                keyboard->keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font_icon, "\xEF\x8B\xAD", 0);
+            } else {
+                char letter = keyboard->keyboard_keys[index].key_letter;
+                if (keyboard->is_lowercase && letter >= 'A' && letter <= 'Z') letter += 32;
+                keyboard -> keyboard_keys[index].key_ttf_text = TTF_CreateText(text_engine, font, (char[2]) { letter, '\0' }, 0);
+            }
             
         }
         
@@ -429,6 +457,20 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
 // ---------------------------------------------------------------------------------------------- //
 
+const char *get_key_name_str(char letter, char *fallback_buffer) {
+    if (letter == '-') return "space";
+    if (letter == '<') return "backspace";
+    if (letter == '*') return "speak";
+    if (letter == '>') return "accept";
+    if (letter == '^') return "capslock";
+    if (letter == '#') return "clearall";
+    fallback_buffer[0] = letter;
+    fallback_buffer[1] = '\0';
+    return fallback_buffer;
+}
+
+// ---------------------------------------------------------------------------------------------- //
+
 int get_key_index_by_letter(keyboard_t *keyboard, char letter) {
 
     for (int index = 0; index < keyboard -> keyboard_key_count; index++) {
@@ -443,28 +485,39 @@ int get_key_index_by_letter(keyboard_t *keyboard, char letter) {
 
 // ---------------------------------------------------------------------------------------------- //
 
-void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float refresh_rate, lsl_t *lsl) {
+void toggle_caps_lock(keyboard_t *keyboard) {
+    keyboard->is_lowercase = !keyboard->is_lowercase;
+    for (int i = 0; i < keyboard->keyboard_key_count; i++) {
+        char letter = keyboard->keyboard_keys[i].key_letter;
+        if (letter >= 'A' && letter <= 'Z') {
+            if (keyboard->keyboard_keys[i].key_ttf_text) {
+                TTF_DestroyText(keyboard->keyboard_keys[i].key_ttf_text);
+                keyboard->keyboard_keys[i].key_ttf_text = NULL;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------- //
+
+void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float refresh_rate, lsl_t *lsl, int is_tts_speaking) {
+
+    float state_elapsed_time = (float)(refresh_rate_frame_index - keyboard -> state_start_frame_index) / refresh_rate;
+
+    if (keyboard -> keyboard_state == keyboard_state_feedback && state_elapsed_time >= keyboard -> state_feedback_duration) {
+        send_lsl_marker(lsl, "stop_feedback");
+        keyboard -> keyboard_state = keyboard_state_idle;
+        keyboard -> state_start_frame_index = refresh_rate_frame_index;
+        keyboard -> keyboard_key_index = -1;
+        send_lsl_marker(lsl, "start_iti");
+        state_elapsed_time = 0.0f;
+    }
 
     if (keyboard -> is_sequence_running) {
 
-        float state_elapsed_time = (float)(refresh_rate_frame_index - keyboard -> state_start_frame_index) / refresh_rate;
-
         if (keyboard -> keyboard_mode == keyboard_mode_training) { 
 
-            if (keyboard -> keyboard_state == keyboard_state_feedback && state_elapsed_time >= keyboard -> state_feedback_duration) {
-
-                send_lsl_marker(lsl, "stop_feedback");
-
-                keyboard -> keyboard_state = keyboard_state_idle;
-
-                keyboard->state_start_frame_index = refresh_rate_frame_index;
-
-                keyboard -> keyboard_key_index = -1;
-
-                send_lsl_marker(lsl, "start_iti");
-            }
-
-            else if (keyboard -> keyboard_state == keyboard_state_cue && state_elapsed_time >= keyboard -> state_cue_duration) {
+            if (keyboard -> keyboard_state == keyboard_state_cue && state_elapsed_time >= keyboard -> state_cue_duration) {
 
                 send_lsl_marker(lsl, "stop_cue");
 
@@ -488,6 +541,8 @@ void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float r
 
             else if (keyboard -> keyboard_state == keyboard_state_idle && state_elapsed_time >= keyboard -> state_idle_duration) {
 
+                if (is_tts_speaking) return;
+
                 send_lsl_marker(lsl, "stop_iti");
                 
                 keyboard -> current_trial++;
@@ -502,9 +557,9 @@ void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float r
 
                     char letter = keyboard -> keyboard_keys[keyboard -> keyboard_key_index].key_letter;
 
-                    char key_str[2] = { letter, '\0' };
+                    char key_str[2];
 
-                    const char *key_name = (letter == '-') ? "space" : ((letter == '<') ? "backspace" : key_str);
+                    const char *key_name = get_key_name_str(letter, key_str);
 
                     send_lsl_marker(lsl, "start_cue;label=%d;key=%s", keyboard -> keyboard_key_index, key_name);
 
@@ -517,20 +572,9 @@ void update_keyboard(keyboard_t *keyboard, int refresh_rate_frame_index, float r
 
         } else if (keyboard -> keyboard_mode == keyboard_mode_online) {
 
-            if (keyboard -> keyboard_state == keyboard_state_feedback && state_elapsed_time >= keyboard -> state_feedback_duration) {
+            if (keyboard -> keyboard_state == keyboard_state_idle && state_elapsed_time >= keyboard -> state_idle_duration) {
                 
-                send_lsl_marker(lsl, "stop_feedback");
-
-                keyboard -> keyboard_state = keyboard_state_idle;
-
-                keyboard -> state_start_frame_index = refresh_rate_frame_index;
-
-                keyboard -> keyboard_key_index = -1;
-
-                send_lsl_marker(lsl, "start_iti");
-            }
-            
-            else if (keyboard -> keyboard_state == keyboard_state_idle && state_elapsed_time >= keyboard -> state_idle_duration) {
+                if (is_tts_speaking) return;
                 
                 send_lsl_marker(lsl, "stop_iti");
 

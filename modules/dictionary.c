@@ -102,10 +102,22 @@ const char *get_prediction(const char *current_text) {
     
     if (len == 0) return "";
 
+    char upper_last_word[MAX_WORD_LENGTH];
+    
+    strncpy(upper_last_word, last_word, sizeof(upper_last_word) - 1);
+    
+    upper_last_word[sizeof(upper_last_word) - 1] = '\0';
+    
+    for (int i = 0; upper_last_word[i]; i++) {
+        upper_last_word[i] = toupper((unsigned char)upper_last_word[i]);
+    }
+
     for (int index = 0; index < dictionary_word_count; index++) {
         
-        if (strncmp(dictionary_words[index], last_word, len) == 0) {
+        if (strncmp(dictionary_words[index], upper_last_word, len) == 0) {
             
+            // return the predicted part, matching the case of what the user typed?
+            // Actually, we can just return the uppercase dictionary word's remainder.
             return dictionary_words[index] + len;
             
         }

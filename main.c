@@ -94,6 +94,8 @@ int main() {
 
     TTF_Font *font_montserrat_extrabold_64 = TTF_OpenFont("fonts/montserrat_extrabold.ttf", 64);
     
+    TTF_Font *font_awesome_48 = TTF_OpenFont("fonts/fa-solid-900.ttf", 48);
+    
     // ---------------------------------------------------------------------------------------------- //
 
     initialize_dictionary("words/en.txt");
@@ -149,11 +151,13 @@ int main() {
 
             if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_6 || event.key.key == SDLK_KP_6) && !event.key.repeat) toggle_photodiode_visibility(&photodiode_presentation_rate);
 
-            // ---------------------------------------------------------------------------------------------- //
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_9 || event.key.key == SDLK_KP_9) && !event.key.repeat && get_key_index_by_letter(&keyboard, '*') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '*'));
 
-            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_8 || event.key.key == SDLK_KP_8) && !event.key.repeat) text_to_speech(&tts, output.output_text);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_8 || event.key.key == SDLK_KP_8 || event.key.key == SDLK_TAB) && !event.key.repeat && get_key_index_by_letter(&keyboard, '>') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '>'));
+            
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_7 || event.key.key == SDLK_KP_7) && !event.key.repeat && get_key_index_by_letter(&keyboard, '#') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '#'));
 
-            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_0 || event.key.key == SDLK_KP_0) && !event.key.repeat) accept_prediction(&output);
+            if (event.type == SDL_EVENT_KEY_DOWN && (event.key.key == SDLK_0 || event.key.key == SDLK_KP_0 || event.key.key == SDLK_CAPSLOCK) && !event.key.repeat && get_key_index_by_letter(&keyboard, '^') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '^'));
 
             // ---------------------------------------------------------------------------------------------- //
 
@@ -162,7 +166,7 @@ int main() {
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_SPACE && get_key_index_by_letter(&keyboard, '-') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '-'));
 
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_BACKSPACE && get_key_index_by_letter(&keyboard, '<') != -1) push_event_feedback(get_key_index_by_letter(&keyboard, '<'));
-
+            
             // ---------------------------------------------------------------------------------------------- //
 
             if (event.type == custom_event_types.custom_event_type_idle) {
@@ -203,9 +207,9 @@ int main() {
 
                 char letter = (keyboard.keyboard_key_index >= 0 && keyboard.keyboard_key_index < keyboard.keyboard_key_count) ? keyboard.keyboard_keys[keyboard.keyboard_key_index].key_letter : '?';
 
-                char key_str[2] = { letter, '\0' };
+                char key_str[2];
                 
-                const char *key_name = (letter == '-') ? "space" : ((letter == '<') ? "backspace" : key_str);
+                const char *key_name = get_key_name_str(letter, key_str);
                 
                 send_lsl_marker(&lsl, "start_cue;label=%d;key=%s", keyboard.keyboard_key_index, key_name);
 
@@ -235,7 +239,7 @@ int main() {
 
             if (event.type == custom_event_types.custom_event_type_feedback) {
 
-                if (keyboard.keyboard_mode == keyboard_mode_training || keyboard.keyboard_state == keyboard_state_idle) continue;
+                if (keyboard.keyboard_mode == keyboard_mode_training) continue;
 
                 if (keyboard.keyboard_state == keyboard_state_flashing) send_lsl_marker(&lsl, "stop_trial");
 
@@ -249,10 +253,10 @@ int main() {
 
                 char letter = (keyboard.keyboard_key_index >= 0 && keyboard.keyboard_key_index < keyboard.keyboard_key_count) ? keyboard.keyboard_keys[keyboard.keyboard_key_index].key_letter : '?';
                 
-                char key_str[2] = { letter, '\0' };
+                char key_str[2];
                 
-                const char *key_name = (letter == '-') ? "space" : ((letter == '<') ? "backspace" : key_str);
-
+                const char *key_name = get_key_name_str(letter, key_str);
+                
                 send_lsl_marker(&lsl, "start_feedback;label=%d;key=%s", keyboard.keyboard_key_index, key_name);
                 
                 if (letter == '-') {
@@ -267,11 +271,43 @@ int main() {
 
                     text_to_speech(&tts, "backspace");
 
+                } else if (letter == '*') {
+
+                    text_to_speech(&tts, output.output_text);
+
+                } else if (letter == '>') {
+
+                    accept_prediction(&output);
+
+                    text_to_speech(&tts, output.output_text);
+                    
+                } else if (letter == '^') {
+                    
+                    toggle_caps_lock(&keyboard);
+
+                    text_to_speech(&tts, "caps lock");
+
+                } else if (letter == '#') {
+
+                    output.output_text[0] = '\0';
+                    output.output_text_length = 0;
+                    output.output_text_changed = 1;
+
+                    text_to_speech(&tts, "clear");
+
                 } else {
                     
+                    if (keyboard.is_lowercase && letter >= 'A' && letter <= 'Z') letter += 32;
+
                     add_letter_to_output(&output, letter);
 
-                    text_to_speech(&tts, (char[2]) {letter, '\0'});
+                    if (letter == '.') {
+                        text_to_speech(&tts, "period");
+                    } else if (letter == ',') {
+                        text_to_speech(&tts, "comma");
+                    } else {
+                        text_to_speech(&tts, (char[2]) {letter, '\0'});
+                    }
 
                 }
 
@@ -287,7 +323,17 @@ int main() {
 
         // ---------------------------------------------------------------------------------------------- //
 
-        update_keyboard(&keyboard, fps.refresh_rate_frame_index, fps.refresh_rate, &lsl);
+        int is_tts_speaking = 0;
+        
+        if (tts.tts_process_handle != NULL) {
+            
+            DWORD exit_code;
+            
+            if (GetExitCodeProcess(tts.tts_process_handle, &exit_code) && exit_code == STILL_ACTIVE) is_tts_speaking = 1;
+            
+        }
+
+        update_keyboard(&keyboard, fps.refresh_rate_frame_index, fps.refresh_rate, &lsl, is_tts_speaking);
 
         // ---------------------------------------------------------------------------------------------- //
 
@@ -315,7 +361,7 @@ int main() {
 
         // ---------------------------------------------------------------------------------------------- //
 
-        render_keyboard(renderer, text_engine, font_montserrat_extrabold_64, &keyboard, sequence_frame_index, fps.frames_per_stimulus);
+        render_keyboard(renderer, text_engine, font_montserrat_extrabold_64, font_awesome_48, &keyboard, sequence_frame_index, fps.frames_per_stimulus);
 
         // ---------------------------------------------------------------------------------------------- //
         
@@ -342,6 +388,8 @@ int main() {
     // ---------------------------------------------------------------------------------------------- //
 
     TTF_CloseFont(font_montserrat_extrabold_64);
+    
+    TTF_CloseFont(font_awesome_48);
 
     TTF_CloseFont(font_montserrat_medium_20);
 

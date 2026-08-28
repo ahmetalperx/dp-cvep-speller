@@ -44,9 +44,9 @@ typedef struct output_s {
 
 output_t output = {
 
-    .output_text = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG",
+    .output_text = "WELCOME TO CVEP SPELLER",
 
-    .output_text_length = 43,
+    .output_text_length = 23,
 
     .output_text_changed = 1,
 
@@ -85,6 +85,15 @@ void render_output(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Font
         strncpy(output -> predicted_text, pred, sizeof(output -> predicted_text) - 1);
         
         output -> predicted_text[sizeof(output -> predicted_text) - 1] = '\0';
+
+        if (output->output_text_length > 0) {
+            char last_char = output->output_text[output->output_text_length - 1];
+            if (last_char >= 'a' && last_char <= 'z') {
+                for (int i = 0; output->predicted_text[i]; i++) {
+                    output->predicted_text[i] = tolower((unsigned char)output->predicted_text[i]);
+                }
+            }
+        }
 
         if (output -> predicted_ttf_text != NULL) TTF_DestroyText(output -> predicted_ttf_text);
         
@@ -229,15 +238,13 @@ void clear_output(output_t *output) {
 
 void accept_prediction(output_t *output) {
     
-    const char *pred = get_prediction(output -> output_text);
-    
-    if (pred && strlen(pred) > 0) {
+    if (strlen(output->predicted_text) > 0) {
         
-        size_t pred_len = strlen(pred);
+        size_t pred_len = strlen(output->predicted_text);
         
         if (output -> output_text_length + pred_len < 127) {
             
-            strcat(output -> output_text, pred);
+            strcat(output -> output_text, output->predicted_text);
             
             output -> output_text_length += (int) pred_len;
             
@@ -252,6 +259,8 @@ void accept_prediction(output_t *output) {
             }
             
             output -> output_text_changed = 1;
+            
+            output -> predicted_text[0] = '\0';
             
         }
         
