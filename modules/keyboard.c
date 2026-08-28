@@ -241,6 +241,8 @@ typedef struct keyboard_s {
     
     int keyboard_sequence_num_bits;
 
+    const char* keyboard_sequence_file_path;
+
 } keyboard_t;
 
 // ---------------------------------------------------------------------------------------------- //
@@ -348,6 +350,8 @@ keyboard_t keyboard = {
     .keyboard_sequence_num_keys = 0,
     
     .keyboard_sequence_num_bits = 0,
+    
+    .keyboard_sequence_file_path = "codes/mgold_61_6521.txt",
 
 };
 
@@ -359,7 +363,7 @@ void render_keyboard(SDL_Renderer *renderer, TTF_TextEngine *text_engine, TTF_Fo
 
         int keys, bits;
 
-        if (load_sequence_from_txt("codes/mgold_61_6521.txt", &keys, &bits)) {
+        if (load_sequence_from_txt(keyboard->keyboard_sequence_file_path, &keys, &bits)) {
 
             keyboard->keyboard_sequence_num_keys = keys;
             keyboard->keyboard_sequence_num_bits = bits;

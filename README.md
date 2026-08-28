@@ -56,6 +56,15 @@ The following OS-level optimizations are applied at startup in `main.c` to guara
 
 To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment.
 
+### Step 0: Python Prerequisites
+Although the core Speller is written in C, it exists within the Python-based Dareplane ecosystem.
+1. Install **Python 3.10+** (ensure "Add Python to PATH" is checked during Windows installation).
+2. The wrapper `main.py` uses only standard libraries (`subprocess`, `os`), so no extra `pip install` is needed just to run the Speller.
+3. *(Optional)* If you wish to generate new stimulation sequences using `codes/generate_codes.py`, you will need to install its dependencies:
+   ```bash
+   pip install numpy pyntbci
+   ```
+
 ### Step 1: Portable MSYS2 & GCC
 **MSYS2** is a Unix-like development environment for Windows. It provides a package manager (`pacman`) and a terminal to install compilers and libraries.
 
@@ -300,6 +309,11 @@ When testing manually or running offline experiments, use these physical keyboar
 
 This project does **not** use any external configuration file (e.g., `.json`, `.toml`, `.ini`). Following the Suckless philosophy, **all parameters are hardcoded directly in the C source files** as struct initializers. To change any parameter, you must edit the corresponding `.c` file and **recompile** the project.
 
+### `modules/fps.c` — Display & Timing Parameters
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `presentation_rate` | `60.0` Hz | Target stimulus frequency. Code automatically rounds it to nearest integer divisor of the hardware refresh rate. |
+
 ### `modules/keyboard.c` — Experiment Parameters
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -309,7 +323,7 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | `state_feedback_duration` | `0.7` s | Duration of the decoded feedback highlight |
 | `cue_count` | `10` | Number of trials per Training session |
 | `keyboard_key_count` | `28` | Total number of keys on the on-screen keyboard |
-| Sequence file path | `"codes/mgold_61_6521.txt"` | Original modulated m-sequence file (63 keys × 126 bits). Automatically upsampled at runtime to match refresh rate. Buffer is dynamically allocated via `malloc`. |
+| `keyboard_sequence_file_path` | `"codes/mgold_61_6521.txt"` | Original modulated m-sequence file. Automatically upsampled at runtime. |
 
 ### `modules/keyboard.c` — Visual Style (Color Scheme)
 | State | Border Color | Background Color | Text Color |
