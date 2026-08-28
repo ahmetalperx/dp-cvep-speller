@@ -26,31 +26,6 @@ This project strictly follows a **"Suckless" philosophy**, prioritizing simplici
 - **Global Dependencies:** External libraries (SDL3, LSL) are installed globally into the compiler's environment (MSYS2) rather than cluttering the project repository.
 - **Fullscreen & VSync:** The window opens in exclusive fullscreen mode (`SDL_WINDOW_FULLSCREEN`) with hardware VSync enabled (`SDL_SetRenderVSync(renderer, 1)`), ensuring the render loop is locked precisely to the monitor's refresh rate.
 
-### Dual-Rate Timing System
-The Speller operates on a **dual-rate** timing architecture, which is the foundation of its precision:
-- **Refresh Rate:** The monitor's native hardware refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), auto-detected at startup via `SDL_GetCurrentDisplayMode`.
-- **Presentation Rate:** The rate at which visual stimuli (m-sequence bits) change on screen. The default target is **60 Hz**, but it is automatically snapped to the nearest evenly divisible rate: `presentation_rate = refresh_rate / round(refresh_rate / 60)`.
-  - Example: On a **480 Hz** monitor → `480 / round(480/60)` = `480/8` = **60 Hz** → every 8th hardware frame advances the stimulus by one bit.
-  - Example: On a **144 Hz** monitor → `144 / round(144/60)` = `144/2` = **72 Hz** → every 2nd hardware frame advances the stimulus.
-
-This ensures that stimulus transitions always land on exact hardware frame boundaries, eliminating sub-frame jitter entirely.
-
-### Runtime Upsampling
-The m-sequence codes stored in the `.txt` file are the **original** modulated codes (e.g., 63 keys × 126 bits at 60 Hz). The C Speller **automatically upsamples** these codes at runtime to match the monitor's refresh rate:
-
-1. At startup, the `frames_per_stimulus` ratio is calculated: `N = refresh_rate / presentation_rate` (e.g., `240 / 60 = 4`).
-2. Each original bit is repeated `N` times into an `upsampled_matrix_buffer` (e.g., 126 bits × 4 = 504 upsampled bits).
-3. The render loop indexes directly into this upsampled buffer using the hardware `refresh_rate_frame_index`.
-
-This means **a single `.txt` file works on any monitor** (60 Hz, 144 Hz, 240 Hz, 480 Hz) without needing to regenerate or pre-upsample the codes in Python.
-
-### Windows Performance Tuning
-The following OS-level optimizations are applied at startup in `main.c` to guarantee the lowest possible latency:
-- **Process Priority:** `SetPriorityClass(HIGH_PRIORITY_CLASS)` elevates the process above normal system tasks.
-- **CPU Affinity:** `SetThreadAffinityMask` pins the render thread to a single CPU core to prevent context-switching jitter.
-- **MMCSS (Multimedia Class Scheduler):** `AvSetMmThreadCharacteristicsW("Pro Audio")` with `AVRT_PRIORITY_CRITICAL` tells Windows to treat this thread as a real-time audio/video workload, giving it the highest scheduling priority.
-- **Timer Resolution:** `timeBeginPeriod(1)` sets the system timer granularity to 1ms for precise frame timing.
-
 ---
 
 ## 3. Installation Guide (Windows)
@@ -83,8 +58,6 @@ In the same UCRT64 terminal:
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
 ```
-
-> ⚠️ **Package names are lowercase and use dashes** (not `SDL3` or `SDL3_ttf`). Pacman is case-sensitive.
 
 ### Step 3: Global Lab Streaming Layer (LSL) Setup
 **LSL (Lab Streaming Layer)** is the real-time data streaming protocol used in BCI research. It allows the Speller to send event markers (e.g., `start_trial`, `frame_dropped`) that are time-synchronized with EEG recordings. Since `liblsl` is not available in the MSYS2 package repository, we manually embed it into the compiler environment.
@@ -157,12 +130,12 @@ dp-cvep-speller/
 ├── modules/
 │   ├── background.c              ← Background color rendering (solid black)
 │   ├── photodiode.c              ← Optosensor test squares (top-left & top-right)
-│   ├── keyboard.c                ← 28-key grid (7×4), state machine, lazy TXT sequence loader
+│   ├── keyboard.c                ← 32-key grid (8×4), state machine, lazy TXT sequence loader
 │   ├── events.c                  ← SDL custom event system (TCP/LSL → main loop)
 │   ├── server.c                  ← Winsock2 non-blocking TCP server (Dareplane commands)
 │   ├── lsl.c                     ← LSL outlet (marker stream) & non-blocking inlet (decoder)
-│   ├── output.c                  ← Rendered output text (green, centered, Montserrat Medium 20pt)
-│   ├── tts.c                     ← Windows SAPI Text-to-Speech (async via PowerShell)
+│   ├── output.c                  ← Rendered output text (green typed + grey predicted)
+│   ├── tts.c                     ← Windows SAPI Text-to-Speech (async via CreateThread + PowerShell)
 │   ├── fps.c                     ← Frame timing, drop detection, deferred CSV logging
 │   └── dictionary.c              ← Predictive text engine using words/en.txt
 ├── codes/
@@ -175,7 +148,8 @@ dp-cvep-speller/
 │   └── mseq_61_shift.npz         ← Shifted m-sequences (NPZ format)
 ├── fonts/
 │   ├── montserrat_medium.ttf     ← Output text font (20pt)
-│   └── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
+│   ├── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
+│   └── fa-solid-900.ttf          ← Font Awesome icons for special action keys (48pt)
 ├── words/
 │   └── en.txt                    ← 14,000 word English dictionary for predictive text
 └── log.csv                       ← Frame-by-frame performance log created upon exit
@@ -185,7 +159,7 @@ dp-cvep-speller/
 Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the main loop is structured for zero latency:
 1. **`update_fps`** — Calculate frame index from hardware clock, detect frame drops.
 2. **`update_server`** — Poll non-blocking TCP socket for Dareplane commands.
-3. **`update_lsl`** — Poll LSL network for Decoder predictions. Decoder search is throttled to once every **2 seconds** to prevent network broadcast from blocking the render loop.
+3. **`update_lsl`** — Poll LSL network for Decoder predictions. **Only runs when `keyboard_state != keyboard_state_flashing`** to guarantee zero interference during visual stimulation. Decoder search is throttled to once every **5 seconds** to prevent network broadcast from blocking the render loop.
 4. **`SDL_PollEvent`** — Process keyboard input, TCP events, and LSL events as custom SDL events that trigger state transitions.
 5. **`update_keyboard`** — Advance the keyboard state machine based on elapsed frame time.
 6. **Render** — Draw background, optosensor squares, output text, and the flashing keyboard grid.
@@ -193,46 +167,178 @@ Running at the hardware's exact refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), the 
 
 ---
 
-## 6. Keyboard & Visual Layout
+## 6. DEEP DIVE: Engine & Timing Architecture
 
-### Keyboard Grid
-The on-screen keyboard consists of **28 keys** arranged in a **7×4 grid**:
-- **Keys:** A-Z, Space (`-`), Backspace (`<`)
-- **Key size:** 128×128 pixels with a 4px border
-- **Sequence file:** `codes/mgold_61_6521.txt` (Contains 63 sequences × 126 bits, Speller uses the first 28)
+The core challenge of the `dp-cvep-speller` project is rendering high-frequency visual stimulation (up to 480 Hz) with absolute millisecond precision, while preventing the Windows operating system from preempting the render loop. This is managed by a tight interplay between four core modules: `main.c`, `fps.c`, `photodiode.c`, and `background.c`.
 
-### Photodiode Squares
-Two 64×64px optosensor squares are rendered for external timing verification with a photodiode sensor:
-- **Top-Left (refresh rate):** Toggles black/white every hardware frame. Used to verify the monitor's true refresh rate.
-- **Top-Right (presentation rate):** Toggles black/white every stimulus frame. Used to verify the stimulus presentation rate matches the target.
+### OS-Level Thread Optimization (`main.c`)
+At ultra-high refresh rates like 480 Hz, a single frame lasts only **~2.08 milliseconds**. Any standard background task from the OS can cause a micro-stutter, resulting in a dropped frame. To combat this, `main.c` aggressively hooks into the Windows kernel:
 
-### Output Text
-Decoded letters are displayed as green centered text above the keyboard (Montserrat Medium, 20pt). In Online mode, each decoded letter is appended, with Space and Backspace support. Furthermore, `dictionary.c` provides grey predictive text auto-completions based on `words/en.txt` with case-insensitive checking (`tolower`).
+*   **MMCSS Elevation (`AvSetMmThreadCharacteristicsW`):** The engine registers the main thread with the Windows Multimedia Class Scheduler Service (MMCSS) under the `"Pro Audio"` profile, applying `AVRT_PRIORITY_CRITICAL`. While traditionally used to prevent audio dropouts, here it protects the visual render loop by strictly prioritizing it over almost all other Windows processes.
+*   **CPU Core Affinity (`SetThreadAffinityMask`):** The thread is locked to CPU Core 1 (`1ULL << 1`). This eliminates OS-level context switching across cores, preserving L1/L2 CPU cache integrity and avoiding microsecond delays.
+*   **High-Resolution Timer (`timeBeginPeriod(1)`):** Forces the Windows system timer to 1-millisecond resolution, ensuring that internal thread scheduling and performance counters behave deterministically.
+
+### Dual-Rate Timing System
+The Speller operates on a **dual-rate** timing architecture, which is the foundation of its precision:
+- **Refresh Rate:** The monitor's native hardware refresh rate (e.g., 60 Hz, 144 Hz, 480 Hz), auto-detected at startup via `SDL_GetCurrentDisplayMode`.
+- **Presentation Rate:** The rate at which visual stimuli (m-sequence bits) change on screen. The default target is **60 Hz**, but it is automatically snapped to the nearest evenly divisible rate: `presentation_rate = refresh_rate / round(refresh_rate / 60)`.
+  - Example: On a **480 Hz** monitor → `480 / round(480/60)` = `480/8` = **60 Hz** → every 8th hardware frame advances the stimulus by one bit.
+  - Example: On a **144 Hz** monitor → `144 / round(144/60)` = `144/2` = **72 Hz** → every 2nd hardware frame advances the stimulus.
+
+This ensures that stimulus transitions always land on exact hardware frame boundaries, eliminating sub-frame jitter entirely.
+
+### Runtime Upsampling
+The m-sequence codes stored in the `.txt` file are the **original** modulated codes (e.g., 63 keys × 126 bits at 60 Hz). The C Speller **automatically upsamples** these codes at runtime to match the monitor's refresh rate:
+
+1. At startup, the `frames_per_stimulus` ratio is calculated: `N = refresh_rate / presentation_rate` (e.g., `240 / 60 = 4`).
+2. Each original bit is repeated `N` times into an `upsampled_matrix_buffer` (e.g., 126 bits × 4 = 504 upsampled bits).
+3. The render loop indexes directly into this upsampled buffer using the hardware `refresh_rate_frame_index`.
+
+This means **a single `.txt` file works on any monitor** (60 Hz, 144 Hz, 240 Hz, 480 Hz) without needing to regenerate or pre-upsample the codes in Python.
+
+### Time-Based Frame Drop Compensation (`fps.c`)
+The fatal flaw of traditional render loops is incrementing frames sequentially (`frame++`). If a frame drops, the entire stimulus sequence lags behind real time, causing cumulative drift that destroys EEG synchronization. 
+
+*   **Deterministic Frame Indexing:** The current frame is calculated purely mathematically from the high-resolution CPU clock (`SDL_GetPerformanceCounter()`).
+*   **Automatic Frame Skip:** Because the index is derived from the hardware clock, if the engine misses a Vsync window (e.g., a frame takes 4ms instead of 2ms), the calculated index will automatically jump by 2. The visual sequence skips the lost frame and immediately realigns with real-world time.
+*   **Dual-Rate Tracking:** `fps.c` tracks both the monitor's raw speed (`refresh_rate_frame_index`, e.g., 480 Hz) and the target stimulus speed (`presentation_rate_frame_index`, e.g., 60 Hz). Stimulus frames are calculated using strict integer division, ensuring they trigger perfectly across multiple Vsync cycles (e.g., exactly 8 refresh frames per 1 presentation frame).
+*   **LSL Event Integration:** Whenever `fps.c` detects that `current_index > previous_index + 1`, it instantly pushes a `frame_dropped` marker via LSL, allowing the downstream Dareplane rCCA EEG decoder to mathematically compensate for the irregularity in that specific epoch.
+
+### Hardware Validation via Optosensors (`photodiode.c`)
+Software logs can be misleading; true BCI precision must be validated physically using an optosensor/photodiode attached directly to the monitor glass. `photodiode.c` implements a dual-validation system by rendering two separate tracking squares:
+*   **Refresh Rate Photodiode (Top-Left, 0x0):** Toggles exactly every raw Vsync frame (`fps.refresh_rate_frame_index % 2`). At 480 Hz, it creates a 240 Hz flicker. This allows an oscilloscope to confirm if the physical monitor is truly keeping up with the GPU.
+*   **Presentation Rate Photodiode (Top-Right, 1856x0):** Toggles exactly every stimulus presentation frame (`fps.presentation_rate_frame_index % 2`). At a 60 Hz presentation rate, it creates a 30 Hz flicker. This validates the software's internal clock and the actual on-screen speed of the c-VEP sequence.
 
 ---
 
-## 7. Keyboard State Machine
+## 7. DEEP DIVE: Networking & Event Architecture
 
-The experiment progresses through a series of timed phases (states). Each state transition emits LSL markers for precise time-locked EEG analysis:
+The `dp-cvep-speller` seamlessly integrates into the modular Dareplane ecosystem, which coordinates BCI paradigms through TCP for control commands and Lab Streaming Layer (LSL) for high-frequency synchronization.
 
-```text
-Training Mode (10 trials per session):
-  CUE (0.7s) → FLASHING (4.2s) → ITI (0.3s) → CUE → ... (repeats 10 times)
+### TCP Server & Command Parsing (`server.c`)
+Dareplane's `dp-control-room` orchestrates the experiment by sending string-based TCP commands (e.g., `TRAINING`, `ONLINE`, `GET_PCOMMS`). The `server.c` module implements a custom Winsock2 TCP server:
+*   **Non-Blocking Winsock2:** During socket initialization, `ioctlsocket(..., FIONBIO, ...)` sets both the listening socket and the accepted client socket to non-blocking mode. The `update_server()` function is polled every frame. If no data is present, `recv()` returns `WSAEWOULDBLOCK` and the render loop proceeds instantly.
+*   **Delimiter-Based Parsing:** Network packets are appended into a continuous `server_buffer` (1024 bytes). The parser iterates through the buffer looking for delimiters like `\n`, `\r`, `;`, or `|`. Once found, it injects a null-terminator (`\0`), isolating the command string, and maps it to a custom SDL Event via functions like `push_event_training()`.
+*   **Buffer Shifting with `memmove`:** Because TCP is a stream protocol, a single `recv()` might read half of a command (e.g., `"TRAI"`). The `start_idx` keeps track of fully parsed commands. Any leftover bytes at the end of the buffer are safely shifted to the beginning using `memmove(server->server_buffer, server->server_buffer + start_idx, remaining)`. This guarantees that partial commands are preserved and successfully completed on the next loop iteration, without overflowing the buffer.
+*   **Connection Handshake:** When a client connects, the server immediately sends `"connected to dp-cvep-speller\n"` as acknowledgment. The `GET_PCOMMS` command responds with `"TRAINING|ONLINE|STOP|CLOSE|GET_PCOMMS|UP"`. The `UP` command responds with `"1"` (health check).
 
-Online Mode (continuous until STOP):
-  FLASHING → [wait for Decoder prediction] → FEEDBACK (0.7s) → ITI (0.3s) → FLASHING → ...
-```
+### LSL Emission & Throttle (`lsl.c`)
+*   **Variadic Marker Function:** To keep the codebase clean, LSL emission is wrapped in a variadic function: `void send_lsl_marker(lsl_t *lsl, const char *format, ...)`. Similar to `printf`, it uses `va_list` and `vsnprintf` to dynamically construct strings inside a 256-byte `lsl_marker_buffer`, then pushes via `lsl_push_sample_str`.
+*   **Time-Based Throttle for Decoder Resolution:** Finding an LSL stream on the network via `lsl_resolve_byprop()` is an inherently expensive operation. If called on every frame while the decoder is offline, it floods the network and causes massive frame drops. `update_lsl()` implements an `SDL_GetTicks()` throttle. It only attempts to resolve the stream once every **5 seconds** (the code checks `current_time - lsl->lsl_last_resolve_time > 5000`).
+*   **Flashing Guard:** In `main.c`, the call to `update_lsl()` is wrapped inside `if (keyboard.keyboard_state != keyboard_state_flashing)`. This means **LSL decoder polling is completely disabled during visual stimulation**, providing an absolute guarantee that no network operation can interfere with frame timing during the critical EEG recording phase.
+*   **Non-Blocking Pulling:** Once the inlet is established, predictions (a single `char` index) are pulled in a `while` loop using `lsl_pull_sample_c(...)` with timeout `0.0`. All samples are drained, and only the `last_valid` index is used, ensuring any queue backlog is flushed instantly.
 
-| State | Duration | Description |
-|-------|----------|-------------|
-| `keyboard_state_idle` (ITI) | 0.3s | Inter-Trial Interval. Brief pause between trials. |
-| `keyboard_state_cue` | 0.7s | Target key is highlighted in yellow (border). Training mode only. |
-| `keyboard_state_flashing` | 4.2s | All 28 keys modulated by m-sequence (white flash = bit 1, dark = bit 0). EEG is recorded during this phase. |
-| `keyboard_state_feedback` | 0.7s | Decoded key is highlighted in blue (border). TTS reads aloud the predicted letter. |
+### Unifying State Transitions via SDL Events (`events.c`)
+Directly modifying global states from network callbacks can introduce race conditions and spaghetti code. The architecture circumvents this by filtering everything through the native SDL Event Loop.
+*   **Custom SDL Events:** `events.c` registers custom IDs using `SDL_RegisterEvents(1)` for 5 paradigm events: `IDLE`, `TRAINING`, `ONLINE`, `FEEDBACK`, and `CLOSE`.
+*   **Payload Injection:** The `push_custom_event()` function populates an `SDL_Event` struct. For commands carrying payloads—such as the target index received from LSL—the integer is safely cast and stored in `event.user.data1` via `(void*)(intptr_t)`.
+*   **Centralized Dispatch:** Using `SDL_PushEvent(&event)`, TCP commands and LSL predictions are queued identically to native keyboard strokes or window resizes. The main application loop simply polls `SDL_PollEvent(&event)` and delegates state transitions cleanly.
+
+### Dareplane Orchestrator Wrapper (`main.py`)
+Though the application is pure C, it must be launched by Dareplane's Python-based `dp-control-room`. `main.py` serves as this bridge:
+*   **Instance Cleanup:** `taskkill /f /im main.exe` kills any stale instance before compilation.
+*   **JIT Compilation & Execution:** When Dareplane starts the module, `main.py` injects the MSYS2 path, compiles the C source code with all necessary libraries (`-l lsl -l ws2_32 -l SDL3 -l SDL3_ttf -l winmm -l avrt`), and launches `main.exe` asynchronously via the Windows `start` command. This ensures the executable is always up-to-date.
 
 ---
 
-## 8. Communication Protocol
+## 8. DEEP DIVE: UI & State Machine
+
+### Keyboard Grid (`keyboard.c`)
+The on-screen keyboard consists of **32 keys** arranged in an **8×4 grid**:
+- **Letters:** A-Z (26 keys) fill 7 columns across 4 rows.
+- **Action Keys:** The 8th (rightmost) column holds 4 action keys, plus 2 more in the bottom row:
+  - **Space** (`-`) — Inserts a space character
+  - **Backspace** (`<`) — Deletes the last character
+  - **Accept Prediction** (`>`) — Accepts the grey auto-complete suggestion and reads the entire output via TTS
+  - **Speak** (`*`) — Reads the current output text aloud via TTS
+  - **Caps Lock** (`^`) — Toggles uppercase/lowercase letter display. Destroys and recreates TTF text objects for all letter keys.
+  - **Clear All** (`#`) — Clears the entire output text buffer
+- **Icon Rendering:** All 6 special action keys render **Font Awesome icons** (`fa-solid-900.ttf`, 48pt) using raw UTF-8 byte sequences (e.g., `"\xEF\x80\xA8"` for the volume icon) instead of text characters.
+- **Key size:** 128×128 pixels with a 4px border.
+- **Sequence file:** `codes/mgold_61_6521.txt` (Contains 63 sequences × 126 bits). The Speller uses `index % keyboard_sequence_num_keys` for sequence wrapping across all 32 keys.
+
+### The 4 Core States of the Paradigm
+The core of the speller is managed by the `keyboard_state_t` state machine. This tightly controls the BCI visual paradigm, dictating exactly what is shown on screen and when LSL markers are dispatched for EEG synchronization.
+
+- **Idle (Inter-Trial Interval - ITI):** The system is in a rest phase. No flashing occurs. If the native Windows TTS is still speaking (`is_tts_speaking`), the state machine explicitly pauses the transition (`return`), ensuring auditory feedback does not overlap with visual stimuli.
+- **Cue (Training Mode Only):** The target key is highlighted with a yellow border. This instructs the user on which key to focus on during a calibration phase. The target key index is chosen randomly via `rand() % keyboard_key_count`.
+- **Flashing (Stimulation):** All keys on the grid begin flickering black/white according to their assigned stimulus sequences from the upsampled matrix buffer. A `start_trial` marker is fired. In Online mode, flashing continues until a Feedback event arrives from the decoder. A fallback safety timeout of `state_flashing_duration * 1.5f` (6.3s) prevents infinite flashing if the decoder disconnects.
+- **Feedback (Closed-Loop Decoding):** Triggered when the `dp-cvep-decoder` successfully predicts the target key (or a manual mock key is pressed). The selected key is highlighted with a blue border. The corresponding action (letter append, space, backspace, speak, accept, caps lock, clear) is executed, and TTS reads the result aloud.
+
+### Mathematical Upsampling of the 60Hz Sequence
+To bridge the gap between 480 Hz monitors and 60 Hz fundamental sequences without losing precision, `keyboard.c` mathematically "upsamples" the sequences when `upsample_sequences()` is called:
+*   It calculates `frames_per_stimulus = monitor_refresh_rate / sequence_rate` (e.g., 480 Hz / 60 Hz = 8).
+*   A flat 1D array (`upsampled_matrix_buffer`) is allocated via `malloc(num_keys * upsampled_num_bits)`.
+*   It iterates through the original sequence bits and repeats each bit exactly `frames_per_stimulus` times.
+*   During `render_keyboard()`, the exact pixel color for any key at any moment is derived via: `upsampled_matrix_buffer[(index % num_keys) * upsampled_num_bits + (frame_index % upsampled_num_bits)]`.
+
+### Lazy Loading & Zero-Overhead `.txt` Parsing
+The stimulus sequences are pre-calculated by `generate_codes.py` using m-sequences and Gold codes, then modulated and output as `.txt` files containing `0`s and `1`s. `keyboard.c` uses a highly optimized, lazy-loaded two-pass parser:
+1. **Lazy Evaluation:** `load_sequence_from_txt` is only invoked inside `render_keyboard` upon the first frame render if `keyboard_sequence_num_keys == 0`.
+2. **First Pass (Counting):** The function streams the file using `fgetc`, counting `0`s, `1`s, and `\n` characters to determine the exact matrix dimensions (`rows` and `cols`) without storing anything in memory.
+3. **Single Allocation:** It allocates the exact required memory block for the entire matrix once, as a contiguous 1D array (`malloc(rows * cols)`).
+4. **Second Pass (Populating):** The file pointer is rewound (`rewind(file)`), and the array is populated directly character-by-character with overflow protection (`if (total_elements >= rows * cols) break`).
+
+---
+
+## 9. DEEP DIVE: Prediction & Output
+
+The Dareplane c-VEP speller implements an ultra-fast, lightweight predictive text engine using pure C.
+
+### Static Loading & Memory Management (`dictionary.c`)
+When the application starts, `initialize_dictionary(filepath)` is called to load `words/en.txt` into memory. 
+*   **Fixed Bounds:** It allocates an array of string pointers limited by `MAX_DICTIONARY_WORDS` (20,000 words) to guarantee deterministic memory usage.
+*   **Safe File Reading:** It reads lines using `fgets()` with a buffer of `MAX_WORD_LENGTH` (256 bytes). If a word in the file exceeds this limit, the function safely flushes the rest of the line until it encounters a newline or EOF, preventing buffer overflows.
+*   **Pre-Processing (Optimization):** As words are loaded, any trailing newline/carriage return characters (`\n`, `\r`) are stripped. Every string is converted to uppercase using `toupper()` *before* it is copied to the heap via `strdup()`. Normalizing the dictionary in memory eliminates the need to perform case conversions on dictionary words during the high-frequency rendering loop.
+*   **Cleanup:** `cleanup_dictionary()` frees all heap-allocated word strings on program exit.
+
+### Prediction Logic & Prefix Matching
+The core prediction function is `get_prediction(const char *current_text)`:
+1. **Word Extraction:** It scans the user's current typed text backwards to find the most recent word delimiter (a space `' '` or hyphen `'-'`).
+2. **Dynamic Casing for Matching:** It safely copies this last word into a local buffer (`upper_last_word`) using `strncpy()` and immediately converts the user's input to uppercase.
+3. **Linear Search:** It loops through the `dictionary_words` array and checks for prefix matches using `strncmp(dictionary_words[index], upper_last_word, len)`. 
+4. **Suffix Return:** Because the dictionary and the query are both uppercase, the `strncmp` acts as a highly optimized case-insensitive match. Once a match is found, the engine simply uses pointer arithmetic (`return dictionary_words[index] + len`) to return *only* the remaining letters (the suffix) of the predicted word.
+
+### Dual-Color Rendering: Green vs. Grey (`output.c`)
+The Speller uses a two-tone UI. The user's decoded text is rendered in solid **Green** `{0, 255, 0, 255}`, while the predicted auto-complete suffix is rendered in **Grey** `{128, 128, 128, 255}`.
+*   **Lazy Re-rendering:** Rather than rendering text from scratch every frame, `render_output()` only updates the `SDL3_ttf` text objects if the `output_text_changed` flag is `1`.
+*   **Dynamic Case Adjustment:** The engine looks at the last character the user typed. If the user typed a lowercase letter (`'a'` to `'z'`), the module iterates over the predicted suffix (which is inherently uppercase from `dictionary.c`) and converts it to lowercase using `tolower()`. This ensures the grey predicted text visually perfectly matches the case of the green typed text.
+*   **Side-by-Side Centering:** The module calculates the exact pixel width of both the green `output_ttf_text` and the grey `predicted_ttf_text` using `TTF_GetTextSize()`. It adds both widths together (`total_width = output_width + pred_width`) to find the exact starting `X` coordinate needed to mathematically center the combined string on the screen. It then issues two `TTF_DrawRendererText()` draw calls.
+*   **Accept Prediction:** The `accept_prediction()` function concatenates the predicted suffix to the output text and automatically appends a trailing space `' '`, provided it fits within the 127-character buffer limit.
+*   **Welcome Message:** The output text initializes to `"WELCOME TO CVEP SPELLER"` at startup.
+
+---
+
+## 10. DEEP DIVE: Audio & TTS
+
+The `tts.c` module handles Text-to-Speech (TTS) feedback. In a high-frequency BCI environment, maintaining exact frame timing is paramount. Even a single missed frame ruins the synchronization.
+
+### Why We Avoid Conventional Approaches
+1. **Cloud APIs (e.g., Google/ElevenLabs):** Network latency introduces unpredictable delays, making cloud TTS useless for real-time keystroke feedback.
+2. **Heavyweight Audio Libraries:** Using `SDL_mixer` or `OpenAL` violates the "suckless", zero-dependency philosophy.
+3. **Direct C COM Integration (Windows SAPI):** Initially, the OS-native Windows SAPI was invoked directly via C COM objects. However, when users typed quickly or held down a key (triggering key repeat events), the COM object initialization and synchronization locked the main event loop, resulting in critical frame drops.
+
+### The Solution: Asynchronous Threading + Hidden PowerShell Processes
+To guarantee **0-frame-drops** under all circumstances, `tts.c` shifts the entire TTS workload to the OS process scheduler.
+
+#### 1. Offloading to `CreateThread`
+When `text_to_speech()` is called, it allocates a `tts_thread_args_t` struct on the heap containing the formatted PowerShell command string, and immediately spawns an isolated Windows thread via `CreateThread`. The thread handle is immediately closed (`CloseHandle(CreateThread(...))`) since we don't need to join it. The main thread instantly returns to rendering.
+
+#### 2. Spawning a Hidden PowerShell Executable
+Inside the worker thread (`tts_thread_func`), the code uses `CreateProcessA` with the `CREATE_NO_WINDOW` flag to launch a hidden PowerShell instance leveraging the native `.NET System.Speech` synthesizer. Settings like Voice Gender (1=Female, 2=Male) and Age (3=Adult) are passed as direct integer parameters matching the Microsoft SAPI API enum values.
+
+#### 3. Aggressive Overlap Management (`TerminateProcess`)
+When a user types rapidly, multiple TTS requests can overlap. If a previous TTS process is `STILL_ACTIVE` (checked via `GetExitCodeProcess`), the program calls `TerminateProcess` to instantly kill the old PowerShell instance before launching the new one. This ensures that new keystrokes immediately cut off previous audio without any blocking or memory leaks.
+
+#### 4. Preventing Audio Clipping
+Because the PowerShell process can be killed immediately when the script finishes, the native audio buffer sometimes cuts out early. To prevent clipping, the command appends `Start-Sleep -m 200`. This artificial 200ms delay ensures the audio buffer is fully flushed to the speakers before the process terminates naturally.
+
+#### 5. TTS-Aware State Machine
+In `main.c`, the `is_tts_speaking` flag is computed every frame by checking `GetExitCodeProcess(tts.tts_process_handle, &exit_code) && exit_code == STILL_ACTIVE`. This flag is passed to `update_keyboard()`, which uses it to **pause the ITI→next trial transition** until TTS has finished speaking. This prevents the next visual stimulus from starting while audio feedback is still playing, ensuring a clean cognitive separation for the user.
+
+---
+
+## 11. Communication Protocol Reference
 
 ### LSL Marker Stream (Outlet)
 | Property | Value |
@@ -245,11 +351,11 @@ Online Mode (continuous until STOP):
 
 | Marker | Description |
 |--------|-------------|
-| `start_cue;label=X;key=Y` | Sent at the beginning of a cue phase. Contains target key index (`X`) and character (`Y`). |
+| `start_cue;label=X;key=Y` | Sent at the beginning of a cue phase. Contains target key index (`X`) and character (`Y`). For special keys, `Y` is a name like `space`, `backspace`, `speak`, `accept`, `capslock`, `clearall`. |
 | `stop_cue` | Sent when the cue phase ends. |
 | `start_trial` | Sent when the stimulation (flashing) starts. Primary trigger for the decoder to epoch EEG data. |
 | `stop_trial` | Sent when the stimulation ends. |
-| `start_feedback;label=X;key=Y`| Sent when visual feedback is presented (based on decoder prediction). |
+| `start_feedback;label=X;key=Y`| Sent when visual feedback is presented (based on decoder prediction). Same key naming convention as cue. |
 | `stop_feedback` | Sent when the feedback phase ends. |
 | `start_iti` | Sent at the beginning of the Inter-Trial Interval. |
 | `stop_iti` | Sent at the end of the Inter-Trial Interval. |
@@ -261,21 +367,22 @@ Online Mode (continuous until STOP):
 | **Searched Stream Name** | `cvep-decoder-stream` |
 | **Channel Format** | `cft_char8` (single byte, key index) |
 | **Pull Timeout** | `0.0` (non-blocking) |
-| **Resolve Interval** | Every 2000 ms (throttled to prevent frame drops) |
+| **Resolve Interval** | Every 5000 ms (throttled to prevent frame drops) |
+| **Flashing Guard** | `update_lsl()` is **not called** during `keyboard_state_flashing` |
 
 ### TCP Commands (Dareplane Server: `127.0.0.1:8084`)
 | Incoming Command | Triggered Action |
 |------------------|------------------|
-| `UP` | Health check (is module alive?) |
-| `GET_PCOMMS` | Returns supported command list |
-| `TRAINING` | Switches to Training mode |
-| `ONLINE` | Switches to Online mode |
+| `UP` | Health check — responds with `"1"` |
+| `GET_PCOMMS` | Returns supported commands: `"TRAINING\|ONLINE\|STOP\|CLOSE\|GET_PCOMMS\|UP"` |
+| `TRAINING` | Switches to Training mode (Cue → Flashing → ITI loop, 10 trials) |
+| `ONLINE` | Switches to Online mode (continuous Flashing → Feedback → ITI loop) |
 | `STOP` | Switches to Idle, halts current stimulation |
 | `CLOSE` | Terminates the program safely |
 
 ---
 
-## 9. Performance Logging (`log.csv`)
+## 12. Performance Logging (`log.csv`)
 
 Upon program exit, all frame timing data accumulated during the session is written to `log.csv`. This file contains one row per rendered frame with the following columns:
 
@@ -295,22 +402,26 @@ Upon program exit, all frame timing data accumulated during the session is writt
 
 ---
 
-## 10. Controls & Keyboard Shortcuts
+## 13. Controls & Keyboard Shortcuts
 When testing manually or running offline experiments, use these physical keyboard shortcuts:
 - `ESC`: Close program safely (and dump performance logs)
-- `1 / NumPad 1`: Switch to Idle Mode
+- `1 / NumPad 1`: Switch to Idle Mode (STOP)
 - `2 / NumPad 2`: Switch to Training Mode
 - `3 / NumPad 3`: Switch to Online Mode
 - `4 / NumPad 4`: Toggle Left optosensor (refresh rate photodiode)
 - `5 / NumPad 5`: Toggle output text visibility
 - `6 / NumPad 6`: Toggle Right optosensor (presentation rate photodiode)
-- `8 / NumPad 8`: Read output text aloud (TTS)
-- `9 / NumPad 9`: Accept TTS prediction text (reads whole string)
-- `A-Z, Space, Backspace`: Trigger a manual "mock" decoder simulation in Online mode for testing.
+- `7 / NumPad 7`: Simulate Clear All (`#`) key selection
+- `8 / NumPad 8 / Tab`: Simulate Accept Prediction (`>`) key selection
+- `9 / NumPad 9`: Simulate Speak (`*`) key selection
+- `0 / NumPad 0 / CapsLock`: Simulate Caps Lock (`^`) key selection
+- `A-Z`: Simulate the corresponding letter key selection (mock decoder)
+- `Space`: Simulate Space (`-`) key selection
+- `Backspace`: Simulate Backspace (`<`) key selection
 
 ---
 
-## 11. Configuration Reference (Hardcoded Parameters)
+## 14. Configuration Reference (Hardcoded Parameters)
 
 This project does **not** use any external configuration file (e.g., `.json`, `.toml`, `.ini`). Following the Suckless philosophy, **all parameters are hardcoded directly in the C source files** as struct initializers. To change any parameter, you must edit the corresponding `.c` file and **recompile** the project.
 
@@ -329,8 +440,9 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | `state_flashing_duration` | `4.2` s | Duration of the visual stimulation phase |
 | `state_feedback_duration` | `0.7` s | Duration of the decoded feedback highlight |
 | `cue_count` | `10` | Number of trials per Training session |
-| `keyboard_key_count` | `28` | Total number of keys on the on-screen keyboard |
+| `keyboard_key_count` | `32` | Total number of keys on the on-screen keyboard (A-Z + 6 action keys) |
 | `keyboard_sequence_file_path` | `"codes/mgold_61_6521.txt"` | Original modulated m-sequence file. Automatically upsampled at runtime. |
+| `is_lowercase` | `0` (uppercase) | Whether to display and type lowercase letters (toggled by Caps Lock key) |
 
 ### `modules/keyboard.c` — Visual Style (Color Scheme)
 | State | Border Color | Background Color | Text Color |
@@ -345,13 +457,15 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 |-----------|---------|-------------|
 | `lsl_marker_stream_name` | `"cvep-speller-stream"` | Name of the outgoing LSL marker stream |
 | `lsl_decoder_stream_name` | `"cvep-decoder-stream"` | Name of the incoming decoder LSL stream to search for |
-| Resolve throttle | `2000` ms | How often to search for the decoder stream when disconnected (previously 5000ms, tightened for faster coupling) |
+| Resolve throttle | `5000` ms | How often to search for the decoder stream when disconnected |
+| `lsl_marker_buffer` | 256 bytes | Static buffer used by the variadic `send_lsl_marker()` function |
 
 ### `modules/server.c` — TCP Server Configuration
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `server_ip` | `"127.0.0.1"` | IP address the TCP server binds to |
 | `server_port` | `8084` | TCP port the server listens on |
+| `server_buffer` | 1024 bytes | Accumulation buffer for TCP stream parsing with `memmove` |
 
 ### `modules/photodiode.c` — Optosensor Squares
 | Parameter | Default | Description |
@@ -364,10 +478,12 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 ### `modules/output.c` — Output Text Display
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `output_text` | `"WELCOME TO CVEP SPELLER"` | Initial welcome message displayed at startup |
 | `output_text_y` | `106.0` px | Vertical position of the output text |
 | `output_text_color` | Green `(0,255,0)` | Color of the decoded output text |
 | `predicted_text_color` | Gray `(128,128,128)` | Color of the predictive autocomplete text |
 | `output_is_visible` | `1` (visible) | Whether the output text is shown at startup |
+| Max output length | 127 characters | Hard buffer limit preventing overflow |
 
 ### `modules/tts.c` — Text-to-Speech
 | Parameter | Default | Description |
@@ -386,5 +502,5 @@ This project does **not** use any external configuration file (e.g., `.json`, `.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | Dictionary File | `"words/en.txt"` | 14,000 word English dictionary used for predictive typing logic |
-| `MAX_WORDS` | `20000` | Max number of words allocated in dictionary |
+| `MAX_DICTIONARY_WORDS` | `20000` | Max number of words allocated in dictionary |
 | `MAX_WORD_LENGTH` | `256` | Max character length per word line to prevent buffer overflows |
