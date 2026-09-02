@@ -28,59 +28,127 @@ This project strictly follows a **"Suckless" philosophy**, prioritizing simplici
 
 ---
 
-## 3. Installation Guide (Windows)
+## 3. Installation Guide (Windows) - Sıfır Bilgi ile Adım Adım Kurulum
 
-To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment.
+Bu proje, yüksek hızlı (480 Hz) ekranlarda sıfır kare düşmesi (0-frame-drop) hedefiyle C dilinde yazılmış bir görsel heceleyici (speller) arayüzüdür. **Daha önce hiç programlama yapmamış veya bilgisayara kurulum yapmamış birinin** bile projeyi kurabilmesi için tüm adımlar tek tek yazılmıştır.
 
-### Step 0: Python Prerequisites
-Although the core Speller is written in C, it exists within the Python-based Dareplane ecosystem.
-1. Install **Python 3.10+** (ensure "Add Python to PATH" is checked during Windows installation).
-2. The wrapper `main.py` uses only standard libraries (`subprocess`, `os`), so no extra `pip install` is needed just to run the Speller.
-3. *(Optional)* If you wish to generate new stimulation sequences using `codes/generate_codes.py`, you will need to install its dependencies:
+### 🛑 DİKKAT: 480 FPS / Sıfır Kare Düşmesi İçin Ön Şartlar 🛑
+Laboratuvar testlerinde 480 Hz monitörde 0-1 drop ile mükemmel bir sonuç elde ettik. Bu performansı sağlamak için deney sırasında **mutlaka** aşağıdakileri yapmalısınız:
+1. **İnterneti Kapatın:** Arka plandaki güncellemelerin veya bildirimlerin sistemi meşgul etmemesi için masaüstündeki "İnternet Off" vb. kısayollarla veya ağ ayarlarından interneti **tamamen kapatın** (Offline mod).
+2. **Arka Plan Uygulamalarını Kapatın:** Spotify, Discord, Chrome, gereksiz hizmetler (hizmetler penceresinden) ve açık olan diğer tüm programları kapatın. Sadece C Speller ve Dareplane modülleri açık kalsın.
+
+---
+
+### ADIM 1: Gerekli Temel Programların Kurulumu (Git & Python)
+
+Projeyi kurmak için öncelikle iki temel programa ihtiyacımız var: **Git** ve **Miniconda**.
+
+**1.1 Git Kurulumu**
+1. İnternet tarayıcınızı açın ve **git-scm.com/download/win** adresine gidin.
+2. `64-bit Git for Windows Setup` yazan yere tıklayıp indirin.
+3. İndirilen dosyaya çift tıklayın. Hiçbir ayarı değiştirmeden sürekli **"Next"** (İleri) butonuna basarak kurulumu bitirin.
+
+**1.2 Miniconda (Python) Kurulumu**
+1. **docs.anaconda.com/miniconda/install/#windows** adresine gidin.
+2. Oradaki indirme bağlantısına tıklayarak (Windows installer) kurulum dosyasını indirin.
+3. Çift tıklayarak açın. Yine hiçbir ayarı değiştirmeden sürekli **"Next"** diyerek kurulumu tamamlayın.
+
+---
+
+### ADIM 2: Dareplane & LSL Sistemi Kurulumu (Python Tarafı)
+
+Şimdi projemizin Python tarafını (beyin sinyallerini analiz edecek ve kaydedecek kısmı) kuracağız.
+
+1. Başlat menüsünü (Windows tuşuna basarak) açın.
+2. Arama kısmına **Anaconda Prompt** yazın ve siyah ikonlu çıkan programa tıklayın. Siyah bir terminal ekranı açılacak.
+3. Önce eksik olan kütüphaneleri indirmeliyiz. Şu kodu yazıp **Enter**'a basın (İnternetiniz açık olsun):
    ```bash
-   pip install numpy pyntbci
+   pip install waitress dash GitPython toml
    ```
-
-### Step 1: Portable MSYS2 & GCC
-**MSYS2** is a Unix-like development environment for Windows. It provides a package manager (`pacman`) and a terminal to install compilers and libraries.
-
-1. Download **MSYS2** from [msys2.org](https://www.msys2.org/). 
-2. Install it directly to a persistent, non-wiped drive (e.g., `D:\Users\alper\msys64`). This ensures your compiler survives reboots.
-3. Open the **MSYS2 UCRT64** terminal (not the default MSYS terminal!) and install the **GCC C compiler**. GCC is needed to compile `main.c` into `main.exe`:
+4. Masaüstündeki `dp-cvep` klasörüne (Setup dosyanızın olduğu yere) gidelim:
    ```bash
-   pacman -S mingw-w64-ucrt-x86_64-gcc
+   cd Desktop\dp-cvep
    ```
+5. Kurulum dosyasını çalıştırın:
+   ```bash
+   python setup_cvep_demo_biosemi.py
+   ```
+   Bu işlem biraz sürebilir, arkada Github'dan klasörleri çekecektir. (Eğer size "[y/N]" diye sorarsa klavyeden `y` tuşuna basıp Enter'a basın).
 
-### Step 2: Install Graphics Libraries (SDL3)
-**SDL3** is the graphics library that handles window creation, GPU-accelerated rendering, and VSync synchronization. **SDL3_ttf** is its font extension for rendering text on screen (keyboard letters and output text).
+**🚨 KRİTİK ADIM: Lab Recorder Yolunu Düzeltme**
+Setup işlemi bitince, indirilen dosyalar içinde bir klasör yolu düzeltmeniz **zorunludur**, aksi halde kayıt alamazsınız:
+1. `Masaüstü` -> `dp-cvep` -> `cvep_speller_env` -> `dp-lsl-recording` -> `configs` klasörüne girin.
+2. Oradaki `lsl_conf.toml` dosyasını Not Defteri ile açın.
+3. `lsl_recorder_exe_path` yazan satırı bulun.
+4. Bu kısmı, o an kullandığınız laboratuvar bilgisayarında **LabRecorder.exe** neredeyse oranın tam adresiyle değiştirin. Örneğin masaüstünde ise:
+   `lsl_recorder_exe_path = 'C:\Users\lab\Desktop\LabRecorder\LabRecorder.exe'` şeklinde ayarlayın ve kaydedip kapatın.
 
-In the same UCRT64 terminal:
-```bash
-pacman -S mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
-```
+*Not: Tüm python modülleri (.npz yerine) güncel text (.txt) kod okuma sistemine optimize edilmiştir.*
 
-### Step 3: Global Lab Streaming Layer (LSL) Setup
-**LSL (Lab Streaming Layer)** is the real-time data streaming protocol used in BCI research. It allows the Speller to send event markers (e.g., `start_trial`, `frame_dropped`) that are time-synchronized with EEG recordings. Since `liblsl` is not available in the MSYS2 package repository, we manually embed it into the compiler environment.
+---
 
-1. Go to the official liblsl releases page: [github.com/sccn/liblsl/releases](https://github.com/sccn/liblsl/releases)
-2. Download the latest **Windows AMD64** release (e.g., `liblsl-1.16.2-Win_amd64.zip`)
-3. Extract the ZIP file. Inside you will find:
+### ADIM 3: C Derleyicisinin (MSYS2) Kurulumu
+
+Bu adım, C ile yazdığımız ana heceleme programını çalıştırabilmek için zorunludur.
+1. **msys2.org** adresine girin.
+2. Sayfada bulunan indirme linkine (`msys2-x86_64-xxxxxxxx.exe`) tıklayıp indirin.
+3. Kurulum programını çalıştırın.
+4. **ÇOK ÖNEMLİ:** Kurulum ekranında "Installation Folder" (Kurulum Yeri) sorduğunda, oraya kesinlikle şu yolu yazın:
+   `D:\Users\alper\msys64`
+   *(Eğer D diskiniz yoksa C'ye de kurabilirsiniz ama laboratuvardaki klasör yolu `D:\Users\alper\msys64` olarak varsayılmaktadır).* "Next" diyerek kurulumu bitirin ve son ekranda "Run MSYS2" tikli iken Finish'e tıklayın.
+
+**3.1 Paketlerin Yüklenmesi**
+Siyah MSYS2 terminali açıldığında şunları yapın:
+1. Şunu yazıp **Enter**'a basın (Sistem güncellenecektir):
+   ```bash
+   pacman -Syu
+   ```
+   *Eğer "Proceed with installation? [Y/n]" sorarsa `Y` yazıp Enter'a basın. İşlem bitince terminal kapanabilir.*
+2. Kapanırsa, başlat menüsünden "MSYS2 MSYS" programını tekrar açın.
+3. Şimdi derleyiciyi ve SDL kütüphanelerini indireceğiz. Aşağıdaki kodu **tek parça halinde kopyalayıp sağ tıklayarak** MSYS2 terminaline yapıştırın ve **Enter**'a basın:
+   ```bash
+   pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
+   ```
+   *Yine soru sorarsa `Y` diyerek onaylayın. Bitmesini bekleyin.*
+
+---
+
+### ADIM 4: Lab Streaming Layer (LSL) Kurulumu
+
+**LSL (Lab Streaming Layer)**, BCI araştırmalarında kullanılan gerçek zamanlı veri aktarım protokolüdür. Speller'ın olay işaretçilerini (örn: `start_trial`, `frame_dropped`) EEG kayıtlarıyla senkronize göndermesini sağlar. `liblsl` MSYS2 paket deposunda bulunmadığı için elle kurulmalıdır.
+
+1. Tarayıcıda şu adrese gidin: **github.com/sccn/liblsl/releases**
+2. En son sürümün altındaki **Windows AMD64** dosyasını indirin (örn: `liblsl-1.16.2-Win_amd64.zip`).
+3. ZIP dosyasını açın (sağ tık → Tümünü Ayıkla). İçinden şu dosyalar lazım:
    ```
    liblsl-X.XX.X-Win_amd64/
-   ├── bin/lsl.dll           ← Runtime library (NEEDED)
-   ├── lib/lsl.lib           ← Linker library (NEEDED)
-   ├── include/lsl_c.h       ← C header file (NEEDED)
-   ├── include/lsl/...       ← Additional headers (NEEDED)
-   ├── cmake/...             ← CMake config (NOT NEEDED, ignore)
-   └── share/...             ← Documentation (NOT NEEDED, ignore)
+   ├── bin/lsl.dll           ← Çalışma zamanı kütüphanesi (GEREKLİ)
+   ├── lib/lsl.lib           ← Bağlayıcı kütüphanesi (GEREKLİ)
+   ├── include/lsl_c.h       ← C başlık dosyası (GEREKLİ)
+   ├── include/lsl/...       ← Ek başlık dosyaları (GEREKLİ)
+   ├── cmake/...             ← CMake ayarları (GEREKSİZ, görmezden gelin)
+   └── share/...             ← Dokümantasyon (GEREKSİZ, görmezden gelin)
    ```
-4. Copy the required files into your MSYS2 UCRT64 directories:
-   - Copy `bin/lsl.dll` → `D:\Users\alper\msys64\ucrt64\bin\lsl.dll`
-   - Copy `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\lsl.lib`
-   - Copy `include/lsl_c.h` → `D:\Users\alper\msys64\ucrt64\include\lsl_c.h`
-   - Copy the entire `include/lsl/` folder → `D:\Users\alper\msys64\ucrt64\include\lsl\`
+4. Gerekli dosyaları MSYS2 UCRT64 klasörlerine kopyalayın:
+   - `bin/lsl.dll` → `D:\Users\alper\msys64\ucrt64\bin\lsl.dll`
+   - `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\lsl.lib`
+   - `include/lsl_c.h` → `D:\Users\alper\msys64\ucrt64\include\lsl_c.h`
+   - `include/lsl/` klasörünün tamamını → `D:\Users\alper\msys64\ucrt64\include\lsl\`
 
-*Your environment is now completely self-sufficient and portable!*
+---
+
+### ADIM 5: Windows Ortam Değişkenleri (PATH) Ayarı
+
+Windows'un kurduğumuz GCC ve SDL dosyalarını bulabilmesi için bu adımı **eksiksiz** yapmalısınız:
+1. Başlat menüsüne (Windows tuşuna) basın ve `Ortam Değişkenleri` (İngilizce ise `Environment Variables`) yazın. 
+2. Çıkan `Sistem ortam değişkenlerini düzenleyin` seçeneğine tıklayın.
+3. Karşınıza küçük bir "Sistem Özellikleri" penceresi çıkacak. En alt sağdaki **Ortam Değişkenleri...** (Environment Variables...) butonuna tıklayın.
+4. Çıkan yeni büyük pencerede, alt kısımdaki **"Sistem Değişkenleri"** (System variables) listesine bakın. O listede **Path** yazan satırı bulun ve üzerine **çift tıklayın**.
+5. Açılan ekranda sağ üstteki **Yeni** (New) butonuna tıklayın.
+6. Açılan boş satıra aynen şunu kopyalayıp yapıştırın:
+   `D:\Users\alper\msys64\ucrt64\bin`
+   *(Eğer MSYS2'yi Adım 3'te C diskinize kurduysanız `C:\msys64\ucrt64\bin` yapın).*
+7. Hepsine sırayla **Tamam** (OK) diyerek tüm pencereleri kapatın.
 
 ---
 
@@ -139,13 +207,10 @@ dp-cvep-speller/
 │   ├── fps.c                     ← Frame timing, drop detection, deferred CSV logging
 │   └── dictionary.c              ← Predictive text engine using words/en.txt
 ├── codes/
-│   ├── generate_codes.py         ← Generates m-sequences (outputs both .npz and .txt)
-│   ├── mgold_61_6521.txt         ← Modulated Gold codes read by C Speller (used in experiment)
-│   ├── mgold_61_6521.npz         ← Modulated Gold codes read by Python Decoder
+│   ├── generate_codes.py         ← Generates m-sequences (outputs .txt files)
+│   ├── mgold_61_6521.txt         ← Modulated Gold codes read by both C Speller and Python Decoder
 │   ├── gold_61_6521.txt          ← Raw Gold codes (TXT format)
-│   ├── gold_61_6521.npz          ← Raw Gold codes (NPZ format)
 │   ├── mseq_61_shift.txt         ← Shifted m-sequences (TXT format)
-│   └── mseq_61_shift.npz         ← Shifted m-sequences (NPZ format)
 ├── fonts/
 │   ├── montserrat_medium.ttf     ← Output text font (20pt)
 │   ├── montserrat_extrabold.ttf  ← Keyboard letter font (64pt)
@@ -249,7 +314,7 @@ The on-screen keyboard consists of **32 keys** arranged in an **8×4 grid**:
 - **Action Keys:** The 8th (rightmost) column holds 4 action keys, plus 2 more in the bottom row:
   - **Space** (`-`) — Inserts a space character
   - **Backspace** (`<`) — Deletes the last character
-  - **Accept Prediction** (`>`) — Accepts the grey auto-complete suggestion and reads the entire output via TTS
+  - **Accept Prediction** (`>`) — Accepts the grey auto-complete suggestion
   - **Speak** (`*`) — Reads the current output text aloud via TTS
   - **Caps Lock** (`^`) — Toggles uppercase/lowercase letter display. Destroys and recreates TTF text objects for all letter keys.
   - **Clear All** (`#`) — Clears the entire output text buffer
@@ -263,7 +328,7 @@ The core of the speller is managed by the `keyboard_state_t` state machine. This
 - **Idle (Inter-Trial Interval - ITI):** The system is in a rest phase. No flashing occurs. If the native Windows TTS is still speaking (`is_tts_speaking`), the state machine explicitly pauses the transition (`return`), ensuring auditory feedback does not overlap with visual stimuli.
 - **Cue (Training Mode Only):** The target key is highlighted with a yellow border. This instructs the user on which key to focus on during a calibration phase. The target key index is chosen randomly via `rand() % keyboard_key_count`.
 - **Flashing (Stimulation):** All keys on the grid begin flickering black/white according to their assigned stimulus sequences from the upsampled matrix buffer. A `start_trial` marker is fired. In Online mode, flashing continues until a Feedback event arrives from the decoder. A fallback safety timeout of `state_flashing_duration * 1.5f` (6.3s) prevents infinite flashing if the decoder disconnects.
-- **Feedback (Closed-Loop Decoding):** Triggered when the `dp-cvep-decoder` successfully predicts the target key (or a manual mock key is pressed). The selected key is highlighted with a blue border. The corresponding action (letter append, space, backspace, speak, accept, caps lock, clear) is executed, and TTS reads the result aloud.
+- **Feedback (Closed-Loop Decoding):** Triggered when the `dp-cvep-decoder` successfully predicts the target key (or a manual mock key is pressed). The selected key is highlighted with a blue border. The corresponding action (letter append, space, backspace, speak, accept, caps lock, clear) is executed. TTS is triggered **only** when the Speak (*) key is selected.
 
 ### Mathematical Upsampling of the 60Hz Sequence
 To bridge the gap between 480 Hz monitors and 60 Hz fundamental sequences without losing precision, `keyboard.c` mathematically "upsamples" the sequences when `upsample_sequences()` is called:
@@ -314,7 +379,7 @@ The Speller uses a two-tone UI. The user's decoded text is rendered in solid **G
 The `tts.c` module handles Text-to-Speech (TTS) feedback. In a high-frequency BCI environment, maintaining exact frame timing is paramount. Even a single missed frame ruins the synchronization.
 
 ### Why We Avoid Conventional Approaches
-1. **Cloud APIs (e.g., Google/ElevenLabs):** Network latency introduces unpredictable delays, making cloud TTS useless for real-time keystroke feedback.
+1. **Cloud APIs (e.g., Google/ElevenLabs):** Network latency introduces unpredictable delays, making cloud TTS useless for real-time feedback.
 2. **Heavyweight Audio Libraries:** Using `SDL_mixer` or `OpenAL` violates the "suckless", zero-dependency philosophy.
 3. **Direct C COM Integration (Windows SAPI):** Initially, the OS-native Windows SAPI was invoked directly via C COM objects. However, when users typed quickly or held down a key (triggering key repeat events), the COM object initialization and synchronization locked the main event loop, resulting in critical frame drops.
 
@@ -328,7 +393,7 @@ When `text_to_speech()` is called, it allocates a `tts_thread_args_t` struct on 
 Inside the worker thread (`tts_thread_func`), the code uses `CreateProcessA` with the `CREATE_NO_WINDOW` flag to launch a hidden PowerShell instance leveraging the native `.NET System.Speech` synthesizer. Settings like Voice Gender (1=Female, 2=Male) and Age (3=Adult) are passed as direct integer parameters matching the Microsoft SAPI API enum values.
 
 #### 3. Aggressive Overlap Management (`TerminateProcess`)
-When a user types rapidly, multiple TTS requests can overlap. If a previous TTS process is `STILL_ACTIVE` (checked via `GetExitCodeProcess`), the program calls `TerminateProcess` to instantly kill the old PowerShell instance before launching the new one. This ensures that new keystrokes immediately cut off previous audio without any blocking or memory leaks.
+When the Speak key is triggered rapidly, multiple TTS requests can overlap. If a previous TTS process is `STILL_ACTIVE` (checked via `GetExitCodeProcess`), the program calls `TerminateProcess` to instantly kill the old PowerShell instance before launching the new one. This ensures that a new speech request immediately cuts off the previous audio without any blocking or memory leaks.
 
 #### 4. Preventing Audio Clipping
 Because the PowerShell process can be killed immediately when the script finishes, the native audio buffer sometimes cuts out early. To prevent clipping, the command appends `Start-Sleep -m 200`. This artificial 200ms delay ensures the audio buffer is fully flushed to the speakers before the process terminates naturally.

@@ -281,13 +281,9 @@ int main() {
                     
                     add_space_to_output(&output);
 
-                    text_to_speech(&tts, "space");
-
                 } else if (letter == '<') {
 
                     delete_letter_from_output(&output);
-
-                    text_to_speech(&tts, "backspace");
 
                 } else if (letter == '*') {
 
@@ -296,14 +292,10 @@ int main() {
                 } else if (letter == '>') {
 
                     accept_prediction(&output);
-
-                    text_to_speech(&tts, output.output_text);
                     
                 } else if (letter == '^') {
                     
                     toggle_caps_lock(&keyboard);
-
-                    text_to_speech(&tts, "caps lock");
 
                 } else if (letter == '#') {
 
@@ -313,27 +305,11 @@ int main() {
                     
                     output.output_text_changed = 1;
 
-                    text_to_speech(&tts, "clear");
-
                 } else {
                     
                     if (keyboard.is_lowercase && letter >= 'A' && letter <= 'Z') letter += 32;
 
                     add_letter_to_output(&output, letter);
-
-                    if (letter == '.') {
-                        
-                        text_to_speech(&tts, "period");
-                        
-                    } else if (letter == ',') {
-                        
-                        text_to_speech(&tts, "comma");
-                        
-                    } else {
-                        
-                        text_to_speech(&tts, (char[2]) { letter, '\0' });
-                        
-                    }
 
                 }
 
