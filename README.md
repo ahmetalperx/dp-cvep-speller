@@ -176,7 +176,7 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
 - **Instance Cleanup:** Before anything else, `taskkill /f /im main.exe` kills any previously running Speller instance to prevent TCP port conflicts.
-- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`.
+- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`. *(Note: Because this path is absolute, it does not matter where you cloned the `cvep_speller_env` workspace. **However, if you installed MSYS2 to a different location (e.g., `C:\msys64`), you MUST open `main.py` and manually change the `path = ...` variable on line 27 to match your installation.**)*
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
