@@ -57,7 +57,7 @@ In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance
 1. Go to **git-scm.com/download/win** in your browser.
 2. Click `64-bit Git for Windows Setup` to download and run it.
 3. **Important Changes during setup:**
-   - **Destination Location:** Change this to `D:\Users\alper\Git` (or your equivalent D: path).
+   - **Destination Location:** Change this to `D:\Users\alper\Git` (Replace 'alper' with your actual folder name on the D: drive).
    - **PATH Environment:** Ensure "Git from the command line and also from 3rd-party software" is selected.
    - Click **"Next"** for all other settings.
 
@@ -66,7 +66,7 @@ In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance
 2. Download the Windows installer and run it.
 3. **Important Changes during setup:**
    - **Installation Type:** Select **"Just Me"**. (Selecting "All Users" requires Administrator rights, which are blocked on lab computers).
-   - **Destination Folder:** Change this to `D:\Users\alper\Miniconda3`.
+   - **Destination Folder:** Change this to `D:\Users\alper\Miniconda3` (Replace 'alper' with your actual folder name).
    - Click **"Next"** for all other settings.
 
 **⚠️ Deep Freeze Warning (Start Menu):**
@@ -88,6 +88,7 @@ Because the Windows Start Menu is on the `C:\` drive, your "Anaconda Prompt" sho
    *(Troubleshooting: If you get an SSL or Certificate error on a university network, use `pip install waitress dash GitPython toml --trusted-host pypi.org --trusted-host files.pythonhosted.org` instead).*
 4. Navigate to your persistent `D:\` drive and clone the main setup repository (DO NOT clone to Desktop, or Deep Freeze will delete it):
    ```bash
+   # Make sure to replace 'alper' with your actual folder name!
    cd D:\Users\alper
    git clone https://github.com/ahmetalperx/dp-cvep.git
    cd dp-cvep
@@ -122,7 +123,7 @@ When you run the Dareplane Control Room or the Speller module for the first time
 3. Run the installer.
 4. **IMPORTANT:** When asked for the "Installation Folder", enter exactly:
    `D:\Users\alper\msys64`
-   *(If you don't have a D: drive, you can use `C:\msys64` instead, but the lab computers use the D: path.)* Click "Next" to finish and leave "Run MSYS2" checked at the end.
+   *(Replace 'alper' with your actual folder name. If you don't have a D: drive, you can use `C:\msys64` instead.)* Click "Next" to finish and leave "Run MSYS2" checked at the end.
 
 **3.1 Install Packages**
 When the MSYS2 terminal opens:
@@ -176,7 +177,7 @@ The Speller is designed to be launched directly by the **Dareplane Control Room*
 ### The Python Wrapper (`main.py`)
 To bridge Dareplane's Python ecosystem with our C application, we use a wrapper script (`main.py`). This script is incredibly powerful for lab environments:
 - **Instance Cleanup:** Before anything else, `taskkill /f /im main.exe` kills any previously running Speller instance to prevent TCP port conflicts.
-- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`. *(Note: Because this path is absolute, it does not matter where you cloned the `cvep_speller_env` workspace. **However, if you installed MSYS2 to a different location (e.g., `C:\msys64`), you MUST open `main.py` and manually change the `path = ...` variable on line 27 to match your installation.**)*
+- **Automatic Environment Injection:** `main.py` dynamically injects the persistent MSYS2 binary path (`D:\Users\alper\msys64\ucrt64\bin`) into the shell environment at runtime via `set PATH=...;%PATH%`. *(Note: Because this path is absolute, it does not matter where you cloned the `cvep_speller_env` workspace. **However, if you installed MSYS2 to a different location (e.g., if your username isn't 'alper' or you used `C:\msys64`), you MUST open `main.py` and manually change the `path = ...` variable on line 27 to match your exact installation.**)*
 - **On-the-fly Compilation:** It compiles the latest C code into an `.exe` silently.
 - **Execution:** It launches the Speller module.
 
@@ -185,6 +186,12 @@ You do not need to manually configure Windows PATH variables or run manual compi
 ### Dareplane Configuration
 You do **not** need to manually edit `example_cfg.toml`. The `setup_cvep_demo_biosemi.py` script automatically generates a custom Dareplane configuration file at `cvep_speller_env/dp-control-room/configs/cvep_speller.toml` containing all necessary module endpoints and macros. 
 The setup script also automatically creates a launch script (`run_cvep_experiment.ps1`) that natively points to this custom config using the `--setup_cfg_path` flag.
+
+### How to Start the Experiment (For Beginners)
+Once installation is complete, starting the experiment is extremely simple:
+1. Navigate to the `dp-control-room` folder (e.g., `D:\Users\alper\dp-cvep\cvep_speller_env\dp-control-room`).
+2. Right-click the **`run_cvep_experiment.ps1`** file and select **"Run with PowerShell"**.
+3. The Dareplane Control Room will open in your web browser. From there, you can launch the Speller, the Decoder, and the LabRecorder with a single click.
 
 *(Note: If you wish to compile it manually for testing outside Dareplane, use this command:)*
 ```bash
