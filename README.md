@@ -133,19 +133,7 @@ When the MSYS2 terminal opens:
 
 ---
 
-### Step 5: Set Windows Environment Variables (PATH)
 
-For Windows to find GCC and SDL, you **must** add the MSYS2 binary path to the system PATH:
-1. Press the **Windows key** and type `Environment Variables`.
-2. Click **"Edit the system environment variables"**.
-3. In the System Properties window, click the **"Environment Variables..."** button at the bottom right.
-4. In the bottom **"System variables"** list, find `Path` and **double-click** it.
-5. Click **"New"** in the top right.
-6. Paste exactly: `D:\Users\alper\msys64\ucrt64\bin`
-   *(If you installed MSYS2 on C:, use `C:\msys64\ucrt64\bin` instead.)*
-7. Click **"OK"** on all windows to close them.
-
----
 
 ## 4. Running the Speller (Dareplane Integration)
 
@@ -161,7 +149,9 @@ To bridge Dareplane's Python ecosystem with our C application, we use a wrapper 
 You do not need to manually configure Windows PATH variables or run manual compilation scripts. Just launch it!
 
 ### Dareplane Configuration
-Add the module to your Dareplane `example_cfg.toml`:
+You do **not** need to manually edit example_cfg.toml. The setup_cvep_demo_biosemi.py script automatically generates a custom Dareplane configuration file at cvep_speller_env/dp-control-room/configs/cvep_speller.toml containing all necessary module endpoints and macros. 
+The setup script also automatically creates a launch script (
+un_cvep_experiment.ps1) that natively points to this custom config using the --setup_cfg_path flag.example_cfg.toml`:
 ```toml
 [python.modules.dp-cvep-speller]
 
@@ -425,7 +415,7 @@ In `main.c`, the `is_tts_speaking` flag is computed every frame by checking `Get
 | Property | Value |
 |----------|-------|
 | **Searched Stream Name** | `cvep-decoder-stream` |
-| **Channel Format** | `cft_char8` (single byte, key index) |
+| **Channel Format** | `cft_int8` (single byte, key index) |
 | **Pull Timeout** | `0.0` (non-blocking) |
 | **Resolve Interval** | Every 5000 ms (throttled to prevent frame drops) |
 | **Flashing Guard** | `update_lsl()` is **not called** during `keyboard_state_flashing` |
