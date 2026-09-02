@@ -28,127 +28,122 @@ This project strictly follows a **"Suckless" philosophy**, prioritizing simplici
 
 ---
 
-## 3. Installation Guide (Windows) - Sıfır Bilgi ile Adım Adım Kurulum
+## 3. Installation Guide (Windows) - Complete Step-by-Step
 
-Bu proje, yüksek hızlı (480 Hz) ekranlarda sıfır kare düşmesi (0-frame-drop) hedefiyle C dilinde yazılmış bir görsel heceleyici (speller) arayüzüdür. **Daha önce hiç programlama yapmamış veya bilgisayara kurulum yapmamış birinin** bile projeyi kurabilmesi için tüm adımlar tek tek yazılmıştır.
+To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment. Every step below is written so that **someone with zero prior experience** can follow along.
 
-### 🛑 DİKKAT: 480 FPS / Sıfır Kare Düşmesi İçin Ön Şartlar 🛑
-Laboratuvar testlerinde 480 Hz monitörde 0-1 drop ile mükemmel bir sonuç elde ettik. Bu performansı sağlamak için deney sırasında **mutlaka** aşağıdakileri yapmalısınız:
-1. **İnterneti Kapatın:** Arka plandaki güncellemelerin veya bildirimlerin sistemi meşgul etmemesi için masaüstündeki "İnternet Off" vb. kısayollarla veya ağ ayarlarından interneti **tamamen kapatın** (Offline mod).
-2. **Arka Plan Uygulamalarını Kapatın:** Spotify, Discord, Chrome, gereksiz hizmetler (hizmetler penceresinden) ve açık olan diğer tüm programları kapatın. Sadece C Speller ve Dareplane modülleri açık kalsın.
-
----
-
-### ADIM 1: Gerekli Temel Programların Kurulumu (Git & Python)
-
-Projeyi kurmak için öncelikle iki temel programa ihtiyacımız var: **Git** ve **Miniconda**.
-
-**1.1 Git Kurulumu**
-1. İnternet tarayıcınızı açın ve **git-scm.com/download/win** adresine gidin.
-2. `64-bit Git for Windows Setup` yazan yere tıklayıp indirin.
-3. İndirilen dosyaya çift tıklayın. Hiçbir ayarı değiştirmeden sürekli **"Next"** (İleri) butonuna basarak kurulumu bitirin.
-
-**1.2 Miniconda (Python) Kurulumu**
-1. **docs.anaconda.com/miniconda/install/#windows** adresine gidin.
-2. Oradaki indirme bağlantısına tıklayarak (Windows installer) kurulum dosyasını indirin.
-3. Çift tıklayarak açın. Yine hiçbir ayarı değiştirmeden sürekli **"Next"** diyerek kurulumu tamamlayın.
+### 🛑 WARNING: Prerequisites for 0-Frame-Drop at 480 FPS 🛑
+In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance during experiments you **must**:
+1. **Disable the internet connection:** Use the desktop "Internet Off" shortcut or disable Wi-Fi/Ethernet from network settings. Background updates and notifications cause micro-stutters.
+2. **Close all background applications:** Spotify, Discord, Chrome, unnecessary Windows services — close everything. Only the C Speller and Dareplane modules should be running.
 
 ---
 
-### ADIM 2: Dareplane & LSL Sistemi Kurulumu (Python Tarafı)
+### Step 1: Install Prerequisites (Git & Python)
 
-Şimdi projemizin Python tarafını (beyin sinyallerini analiz edecek ve kaydedecek kısmı) kuracağız.
+**1.1 Git**
+1. Go to **git-scm.com/download/win** in your browser.
+2. Click `64-bit Git for Windows Setup` to download.
+3. Double-click the installer and click **"Next"** through every screen without changing any settings.
 
-1. Başlat menüsünü (Windows tuşuna basarak) açın.
-2. Arama kısmına **Anaconda Prompt** yazın ve siyah ikonlu çıkan programa tıklayın. Siyah bir terminal ekranı açılacak.
-3. Önce eksik olan kütüphaneleri indirmeliyiz. Şu kodu yazıp **Enter**'a basın (İnternetiniz açık olsun):
+**1.2 Miniconda (Python)**
+1. Go to **docs.anaconda.com/miniconda/install/#windows**.
+2. Download the Windows installer.
+3. Double-click and click **"Next"** through every screen without changing any settings.
+
+---
+
+### Step 2: Dareplane & LSL Ecosystem Setup (Python Side)
+
+1. Open the Start menu (press the Windows key).
+2. Type **Anaconda Prompt** and click the black-icon result. A black terminal window will open.
+3. Install the required Python packages (internet must be on):
    ```bash
    pip install waitress dash GitPython toml
    ```
-4. Masaüstündeki `dp-cvep` klasörüne (Setup dosyanızın olduğu yere) gidelim:
+4. Navigate to the `dp-cvep` folder on your Desktop:
    ```bash
    cd Desktop\dp-cvep
    ```
-5. Kurulum dosyasını çalıştırın:
+5. Run the setup script:
    ```bash
    python setup_cvep_demo_biosemi.py
    ```
-   Bu işlem biraz sürebilir, arkada Github'dan klasörleri çekecektir. (Eğer size "[y/N]" diye sorarsa klavyeden `y` tuşuna basıp Enter'a basın).
+   This may take a while as it clones repositories from GitHub. If prompted with `[y/N]`, type `y` and press Enter.
 
-**🚨 KRİTİK ADIM: Lab Recorder Yolunu Düzeltme**
-Setup işlemi bitince, indirilen dosyalar içinde bir klasör yolu düzeltmeniz **zorunludur**, aksi halde kayıt alamazsınız:
-1. `Masaüstü` -> `dp-cvep` -> `cvep_speller_env` -> `dp-lsl-recording` -> `configs` klasörüne girin.
-2. Oradaki `lsl_conf.toml` dosyasını Not Defteri ile açın.
-3. `lsl_recorder_exe_path` yazan satırı bulun.
-4. Bu kısmı, o an kullandığınız laboratuvar bilgisayarında **LabRecorder.exe** neredeyse oranın tam adresiyle değiştirin. Örneğin masaüstünde ise:
-   `lsl_recorder_exe_path = 'C:\Users\lab\Desktop\LabRecorder\LabRecorder.exe'` şeklinde ayarlayın ve kaydedip kapatın.
+**🚨 CRITICAL: Fix the Lab Recorder Path**
+After setup completes, you **must** manually fix a path, otherwise recording will fail:
+1. Navigate to `Desktop` → `dp-cvep` → `cvep_speller_env` → `dp-lsl-recording` → `configs`.
+2. Open `lsl_conf.toml` with Notepad.
+3. Find the line `lsl_recorder_exe_path`.
+4. Change it to the actual path of **LabRecorder.exe** on your lab computer. For example:
+   `lsl_recorder_exe_path = 'C:\Users\bsdlab\Desktop\LabRecorder\LabRecorder.exe'`
+   Save and close the file.
 
-*Not: Tüm python modülleri (.npz yerine) güncel text (.txt) kod okuma sistemine optimize edilmiştir.*
+*Note: All Python modules (decoder included) now read `.txt` code files instead of `.npz`.*
 
 ---
 
-### ADIM 3: C Derleyicisinin (MSYS2) Kurulumu
+### Step 3: Install the C Compiler (MSYS2)
 
-Bu adım, C ile yazdığımız ana heceleme programını çalıştırabilmek için zorunludur.
-1. **msys2.org** adresine girin.
-2. Sayfada bulunan indirme linkine (`msys2-x86_64-xxxxxxxx.exe`) tıklayıp indirin.
-3. Kurulum programını çalıştırın.
-4. **ÇOK ÖNEMLİ:** Kurulum ekranında "Installation Folder" (Kurulum Yeri) sorduğunda, oraya kesinlikle şu yolu yazın:
+1. Go to **msys2.org** in your browser.
+2. Download the installer (`msys2-x86_64-xxxxxxxx.exe`).
+3. Run the installer.
+4. **IMPORTANT:** When asked for the "Installation Folder", enter exactly:
    `D:\Users\alper\msys64`
-   *(Eğer D diskiniz yoksa C'ye de kurabilirsiniz ama laboratuvardaki klasör yolu `D:\Users\alper\msys64` olarak varsayılmaktadır).* "Next" diyerek kurulumu bitirin ve son ekranda "Run MSYS2" tikli iken Finish'e tıklayın.
+   *(If you don't have a D: drive, you can use `C:\msys64` instead, but the lab computers use the D: path.)* Click "Next" to finish and leave "Run MSYS2" checked at the end.
 
-**3.1 Paketlerin Yüklenmesi**
-Siyah MSYS2 terminali açıldığında şunları yapın:
-1. Şunu yazıp **Enter**'a basın (Sistem güncellenecektir):
+**3.1 Install Packages**
+When the MSYS2 terminal opens:
+1. Type the following and press **Enter** (this updates the system):
    ```bash
    pacman -Syu
    ```
-   *Eğer "Proceed with installation? [Y/n]" sorarsa `Y` yazıp Enter'a basın. İşlem bitince terminal kapanabilir.*
-2. Kapanırsa, başlat menüsünden "MSYS2 MSYS" programını tekrar açın.
-3. Şimdi derleyiciyi ve SDL kütüphanelerini indireceğiz. Aşağıdaki kodu **tek parça halinde kopyalayıp sağ tıklayarak** MSYS2 terminaline yapıştırın ve **Enter**'a basın:
+   *If prompted with "Proceed with installation? [Y/n]", type `Y` and press Enter. The terminal may close when done.*
+2. If it closed, reopen **"MSYS2 MSYS"** from the Start menu.
+3. Now install the compiler and SDL3 libraries. **Copy-paste** the entire command below (right-click to paste) and press **Enter**:
    ```bash
    pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
    ```
-   *Yine soru sorarsa `Y` diyerek onaylayın. Bitmesini bekleyin.*
+   *Type `Y` if prompted. Wait for it to finish.*
 
 ---
 
-### ADIM 4: Lab Streaming Layer (LSL) Kurulumu
+### Step 4: Global Lab Streaming Layer (LSL) Setup
 
-**LSL (Lab Streaming Layer)**, BCI araştırmalarında kullanılan gerçek zamanlı veri aktarım protokolüdür. Speller'ın olay işaretçilerini (örn: `start_trial`, `frame_dropped`) EEG kayıtlarıyla senkronize göndermesini sağlar. `liblsl` MSYS2 paket deposunda bulunmadığı için elle kurulmalıdır.
+**LSL (Lab Streaming Layer)** is the real-time data streaming protocol used in BCI research. It allows the Speller to send event markers (e.g., `start_trial`, `frame_dropped`) that are time-synchronized with EEG recordings. Since `liblsl` is not available in the MSYS2 package repository, we manually embed it into the compiler environment.
 
-1. Tarayıcıda şu adrese gidin: **github.com/sccn/liblsl/releases**
-2. En son sürümün altındaki **Windows AMD64** dosyasını indirin (örn: `liblsl-1.16.2-Win_amd64.zip`).
-3. ZIP dosyasını açın (sağ tık → Tümünü Ayıkla). İçinden şu dosyalar lazım:
+1. Go to the official liblsl releases page: [github.com/sccn/liblsl/releases](https://github.com/sccn/liblsl/releases)
+2. Download the latest **Windows AMD64** release (e.g., `liblsl-1.16.2-Win_amd64.zip`).
+3. Extract the ZIP file (right-click → Extract All). You will need the following files:
    ```
    liblsl-X.XX.X-Win_amd64/
-   ├── bin/lsl.dll           ← Çalışma zamanı kütüphanesi (GEREKLİ)
-   ├── lib/lsl.lib           ← Bağlayıcı kütüphanesi (GEREKLİ)
-   ├── include/lsl_c.h       ← C başlık dosyası (GEREKLİ)
-   ├── include/lsl/...       ← Ek başlık dosyaları (GEREKLİ)
-   ├── cmake/...             ← CMake ayarları (GEREKSİZ, görmezden gelin)
-   └── share/...             ← Dokümantasyon (GEREKSİZ, görmezden gelin)
+   ├── bin/lsl.dll           ← Runtime library (NEEDED)
+   ├── lib/lsl.lib           ← Linker library (NEEDED)
+   ├── include/lsl_c.h       ← C header file (NEEDED)
+   ├── include/lsl/...       ← Additional headers (NEEDED)
+   ├── cmake/...             ← CMake config (NOT NEEDED, ignore)
+   └── share/...             ← Documentation (NOT NEEDED, ignore)
    ```
-4. Gerekli dosyaları MSYS2 UCRT64 klasörlerine kopyalayın:
+4. Copy the required files into your MSYS2 UCRT64 directories:
    - `bin/lsl.dll` → `D:\Users\alper\msys64\ucrt64\bin\lsl.dll`
    - `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\lsl.lib`
    - `include/lsl_c.h` → `D:\Users\alper\msys64\ucrt64\include\lsl_c.h`
-   - `include/lsl/` klasörünün tamamını → `D:\Users\alper\msys64\ucrt64\include\lsl\`
+   - Copy the entire `include/lsl/` folder → `D:\Users\alper\msys64\ucrt64\include\lsl\`
 
 ---
 
-### ADIM 5: Windows Ortam Değişkenleri (PATH) Ayarı
+### Step 5: Set Windows Environment Variables (PATH)
 
-Windows'un kurduğumuz GCC ve SDL dosyalarını bulabilmesi için bu adımı **eksiksiz** yapmalısınız:
-1. Başlat menüsüne (Windows tuşuna) basın ve `Ortam Değişkenleri` (İngilizce ise `Environment Variables`) yazın. 
-2. Çıkan `Sistem ortam değişkenlerini düzenleyin` seçeneğine tıklayın.
-3. Karşınıza küçük bir "Sistem Özellikleri" penceresi çıkacak. En alt sağdaki **Ortam Değişkenleri...** (Environment Variables...) butonuna tıklayın.
-4. Çıkan yeni büyük pencerede, alt kısımdaki **"Sistem Değişkenleri"** (System variables) listesine bakın. O listede **Path** yazan satırı bulun ve üzerine **çift tıklayın**.
-5. Açılan ekranda sağ üstteki **Yeni** (New) butonuna tıklayın.
-6. Açılan boş satıra aynen şunu kopyalayıp yapıştırın:
-   `D:\Users\alper\msys64\ucrt64\bin`
-   *(Eğer MSYS2'yi Adım 3'te C diskinize kurduysanız `C:\msys64\ucrt64\bin` yapın).*
-7. Hepsine sırayla **Tamam** (OK) diyerek tüm pencereleri kapatın.
+For Windows to find GCC and SDL, you **must** add the MSYS2 binary path to the system PATH:
+1. Press the **Windows key** and type `Environment Variables`.
+2. Click **"Edit the system environment variables"**.
+3. In the System Properties window, click the **"Environment Variables..."** button at the bottom right.
+4. In the bottom **"System variables"** list, find `Path` and **double-click** it.
+5. Click **"New"** in the top right.
+6. Paste exactly: `D:\Users\alper\msys64\ucrt64\bin`
+   *(If you installed MSYS2 on C:, use `C:\msys64\ucrt64\bin` instead.)*
+7. Click **"OK"** on all windows to close them.
 
 ---
 
