@@ -33,9 +33,19 @@ This project strictly follows a **"Suckless" philosophy**, prioritizing simplici
 To ensure maximum reliability, especially in laboratory environments where computers might use "Deep Freeze" (wiping the `C:\` drive upon every reboot), we use a fully portable compilation environment. Every step below is written so that **someone with zero prior experience** can follow along.
 
 ### 🛑 WARNING: Prerequisites for 0-Frame-Drop at 480 FPS 🛑
-In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance during experiments you **must**:
-1. **Disable the internet connection:** Use the desktop "Internet Off" shortcut or disable Wi-Fi/Ethernet from network settings. Background updates and notifications cause micro-stutters.
-2. **Close all background applications:** Spotify, Discord, Chrome, unnecessary Windows services — close everything. Only the C Speller and Dareplane modules should be running.
+In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance and prevent data loss during experiments, you **must** configure the following:
+
+**Performance & Frame Drops:**
+1. **Disable the internet connection:** Use the desktop "Internet Off" shortcut or disable Wi-Fi/Ethernet. Background updates cause micro-stutters.
+2. **Close all background applications:** Spotify, Discord, Chrome, unnecessary Windows services — close everything.
+3. **Multi-Monitor Setup:** If using two monitors (e.g., experimenter at 60Hz and subject at 480Hz), use **Extend these displays**, NEVER "Duplicate". Set the 480 Hz monitor as the **Primary Display**, otherwise Windows will cap VSync to 60 Hz.
+4. **Disable Overlays & Game Bar:** Turn off Windows Game Bar, Game Mode, and GPU overlays (like ShadowPlay). They hijack fullscreen exclusive mode.
+5. **Power Management:** Set the Windows Power Plan to **High Performance**. Disable **USB Selective Suspend** in advanced power settings to prevent the EEG amplifier from disconnecting or stuttering.
+6. **Focus Assist (Do Not Disturb):** Turn on Focus Assist to suppress all system toast notifications (e.g., "Disk Space Low") which can forcibly minimize the fullscreen app.
+
+**Data & Network (Lab Specifics):**
+7. **Deep Freeze Data Loss:** Lab computers often wipe the `C:\` drive on reboot. **ALL** recorded EEG data (`.xdf` files) and performance logs (`log.csv`) **MUST** be saved to a thawed drive (e.g., `D:\`) or a USB stick. Otherwise, they will be permanently lost.
+8. **Windows Defender Firewall:** LSL relies on local UDP/TCP broadcasts. Ensure the firewall allows both `main.exe` and Python/LabRecorder to communicate over private networks, or LSL markers will fail to reach the decoder.
 
 ---
 
@@ -151,7 +161,7 @@ When the MSYS2 terminal opens:
    ```
 4. Copy the required files into your MSYS2 UCRT64 directories:
    - `bin/lsl.dll` → `D:\Users\alper\msys64\ucrt64\bin\lsl.dll`
-   - `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\lsl.lib`
+   - `lib/lsl.lib` → `D:\Users\alper\msys64\ucrt64\lib\liblsl.dll.a` *(Note: renaming to .dll.a matches the native MinGW standard)*
    - `include/lsl_c.h` → `D:\Users\alper\msys64\ucrt64\include\lsl_c.h`
    - Copy the entire `include/lsl/` folder → `D:\Users\alper\msys64\ucrt64\include\lsl\`
 
@@ -173,22 +183,8 @@ To bridge Dareplane's Python ecosystem with our C application, we use a wrapper 
 You do not need to manually configure Windows PATH variables or run manual compilation scripts. Just launch it!
 
 ### Dareplane Configuration
-You do **not** need to manually edit example_cfg.toml. The setup_cvep_demo_biosemi.py script automatically generates a custom Dareplane configuration file at cvep_speller_env/dp-control-room/configs/cvep_speller.toml containing all necessary module endpoints and macros. 
-The setup script also automatically creates a launch script (
-un_cvep_experiment.ps1) that natively points to this custom config using the --setup_cfg_path flag.example_cfg.toml`:
-```toml
-[python.modules.dp-cvep-speller]
-
-custom_entry_point = 'main'
-
-ip = '127.0.0.1'
-
-port = 8084
-
-retry_after_s = 3.0
-
-max_connect_retries = 10
-```
+You do **not** need to manually edit `example_cfg.toml`. The `setup_cvep_demo_biosemi.py` script automatically generates a custom Dareplane configuration file at `cvep_speller_env/dp-control-room/configs/cvep_speller.toml` containing all necessary module endpoints and macros. 
+The setup script also automatically creates a launch script (`run_cvep_experiment.ps1`) that natively points to this custom config using the `--setup_cfg_path` flag.
 
 *(Note: If you wish to compile it manually for testing outside Dareplane, use this command:)*
 ```bash
@@ -248,7 +244,7 @@ The core challenge of the `dp-cvep-speller` project is rendering high-frequency 
 ### OS-Level Thread Optimization (`main.c`)
 At ultra-high refresh rates like 480 Hz, a single frame lasts only **~2.08 milliseconds**. Any standard background task from the OS can cause a micro-stutter, resulting in a dropped frame. To combat this, `main.c` aggressively hooks into the Windows kernel:
 
-*   **MMCSS Elevation (`AvSetMmThreadCharacteristicsW`):** The engine registers the main thread with the Windows Multimedia Class Scheduler Service (MMCSS) under the `"Pro Audio"` profile, applying `AVRT_PRIORITY_CRITICAL`. While traditionally used to prevent audio dropouts, here it protects the visual render loop by strictly prioritizing it over almost all other Windows processes.
+*   **MMCSS, Priority & CPU Affinity (`AvSetMmThreadCharacteristicsW` & `SetPriorityClass`):** The engine registers the main thread with the Windows Multimedia Class Scheduler Service (MMCSS) under the `"Pro Audio"` profile, applying `AVRT_PRIORITY_CRITICAL`, and elevates the entire OS process via `SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS)`. While traditionally used to prevent audio dropouts, here it protects the visual render loop by strictly prioritizing it over almost all other Windows processes.
 *   **CPU Core Affinity (`SetThreadAffinityMask`):** The thread is locked to CPU Core 1 (`1ULL << 1`). This eliminates OS-level context switching across cores, preserving L1/L2 CPU cache integrity and avoiding microsecond delays.
 *   **High-Resolution Timer (`timeBeginPeriod(1)`):** Forces the Windows system timer to 1-millisecond resolution, ensuring that internal thread scheduling and performance counters behave deterministically.
 
