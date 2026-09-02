@@ -41,29 +41,46 @@ In lab tests we achieved 0-1 frame drops at 480 Hz. To maintain this performance
 
 ### Step 1: Install Prerequisites (Git & Python)
 
+**🛑 CRITICAL FOR LAB COMPUTERS (Deep Freeze):** Do not install to the `C:\` drive! It will be wiped when the computer restarts. Always change the installation paths to your persistent `D:\` drive.
+
 **1.1 Git**
 1. Go to **git-scm.com/download/win** in your browser.
-2. Click `64-bit Git for Windows Setup` to download.
-3. Double-click the installer and click **"Next"** through every screen without changing any settings.
+2. Click `64-bit Git for Windows Setup` to download and run it.
+3. **Important Changes during setup:**
+   - **Destination Location:** Change this to `D:\Users\alper\Git` (or your equivalent D: path).
+   - **PATH Environment:** Ensure "Git from the command line and also from 3rd-party software" is selected.
+   - Click **"Next"** for all other settings.
 
 **1.2 Miniconda (Python)**
 1. Go to **docs.anaconda.com/miniconda/install/#windows**.
-2. Download the Windows installer.
-3. Double-click and click **"Next"** through every screen without changing any settings.
+2. Download the Windows installer and run it.
+3. **Important Changes during setup:**
+   - **Installation Type:** Select **"Just Me"**. (Selecting "All Users" requires Administrator rights, which are blocked on lab computers).
+   - **Destination Folder:** Change this to `D:\Users\alper\Miniconda3`.
+   - Click **"Next"** for all other settings.
+
+**⚠️ Deep Freeze Warning (Start Menu):**
+Because the Windows Start Menu is on the `C:\` drive, your "Anaconda Prompt" shortcut will disappear after you restart the computer. To open the Anaconda Prompt after a reboot, do not look in the Start Menu. Instead, manually run this file:
+`D:\Users\alper\Miniconda3\Scripts\activate.bat`
 
 ---
 
 ### Step 2: Dareplane & LSL Ecosystem Setup (Python Side)
 
-1. Open the Start menu (press the Windows key).
+**ℹ️ IMPORTANT NOTE:** You do **NOT** need to manually clone this repository (dp-cvep-speller). The master setup repository (dp-cvep) contains a Python script that will automatically download and configure all necessary Dareplane modules (including this C Speller, the Decoder, and the Control Room) in one go.
+
+1. Open the Start menu (press the Windows key). *(Note: Ensure the Git installer from Step 1 has completely finished before opening the prompt, otherwise Git won't be recognized).*
 2. Type **Anaconda Prompt** and click the black-icon result. A black terminal window will open.
 3. Install the required Python packages (internet must be on):
    ```bash
    pip install waitress dash GitPython toml
    ```
-4. Navigate to the `dp-cvep` folder on your Desktop:
+   *(Troubleshooting: If you get an SSL or Certificate error on a university network, use `pip install waitress dash GitPython toml --trusted-host pypi.org --trusted-host files.pythonhosted.org` instead).*
+4. Navigate to your Desktop and clone the main setup repository:
    ```bash
-   cd Desktop\dp-cvep
+   cd Desktop
+   git clone https://github.com/ahmetalperx/dp-cvep.git
+   cd dp-cvep
    ```
 5. Run the setup script:
    ```bash
@@ -82,6 +99,10 @@ After setup completes, you **must** manually fix a path, otherwise recording wil
 
 *Note: All Python modules (decoder included) now read `.txt` code files instead of `.npz`.*
 
+**🚨 CRITICAL: Windows Defender Firewall Popup**
+When you run the Dareplane Control Room or the Speller module for the first time, a Windows Security Alert may pop up asking for network access for Python or `main.exe`. You **MUST** click **"Allow access"** (check both Private and Public networks if prompted). If you click "Cancel", the modules will not be able to communicate, and the experiment will break.
+
+
 ---
 
 ### Step 3: Install the C Compiler (MSYS2)
@@ -95,12 +116,15 @@ After setup completes, you **must** manually fix a path, otherwise recording wil
 
 **3.1 Install Packages**
 When the MSYS2 terminal opens:
-1. Type the following and press **Enter** (this updates the system):
+1. Type the following and press **Enter** (this updates the core system):
    ```bash
    pacman -Syu
    ```
-   *If prompted with "Proceed with installation? [Y/n]", type `Y` and press Enter. The terminal may close when done.*
-2. If it closed, reopen **"MSYS2 MSYS"** from the Start menu.
+   *If prompted, type `Y` and press Enter. If core packages are updated, the terminal will automatically close itself.*
+2. **If it closed**, reopen **"MSYS2 MSYS"** from the Start menu. You **must** run the update command one more time to finish the rest of the system packages:
+   ```bash
+   pacman -Su
+   ```
 3. Now install the compiler and SDL3 libraries. **Copy-paste** the entire command below (right-click to paste) and press **Enter**:
    ```bash
    pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-sdl3-ttf
